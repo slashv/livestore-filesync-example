@@ -4,7 +4,8 @@ import LiveStoreSharedWorker from '@livestore/adapter-web/shared-worker?sharedwo
 import LiveStoreWorker from './livestore/livestore.worker?worker'
 import { schema } from './livestore/schema'
 import { LiveStoreProvider } from 'vue-livestore'
-import ToDos from './components/to-dos.vue'
+import Images from './components/images.vue'
+import Debug from './components/debug.vue'
 
 const adapter = makePersistedAdapter({
   storage: { type: 'opfs' },
@@ -15,7 +16,7 @@ const adapter = makePersistedAdapter({
 const storeOptions = {
   schema,
   adapter,
-  storeId: 'vue-livestore-template-store',
+  storeId: 'vue-livestore-filesync-2',
 }
 </script>
 
@@ -24,6 +25,9 @@ const storeOptions = {
     <template #loading>
       <div>Loading LiveStore...</div>
     </template>
-    <ToDos />
+    <div class="flex flex-col gap-4 p-6">
+      <Images />
+      <Debug />
+    </div>
   </LiveStoreProvider>
 </template>
