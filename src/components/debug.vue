@@ -12,43 +12,63 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
 <template>
   <div>
     <h2>Files</h2>
-    <table border="1" style="border-collapse: collapse;">
+    <table>
       <thead>
         <tr>
-          <th style="text-align: left; padding: 4px 8px;">ID</th>
-          <th style="text-align: left; padding: 4px 8px;">Upload State</th>
-          <th style="text-align: left; padding: 4px 8px;">Local Path</th>
-          <th style="text-align: left; padding: 4px 8px;">Remote URL</th>
+          <th>ID</th>
+          <th>Upload State</th>
+          <th>Local Path</th>
+          <th>Remote URL</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="file in files" :key="file.id">
-          <td style="padding: 4px 8px;">{{ file.id.split('-')[0] }}</td>
-          <td style="padding: 4px 8px;">{{ file.uploadState }}</td>
-          <td style="padding: 4px 8px;">{{ file.localPath }}</td>
-          <td style="padding: 4px 8px;">{{ file.remoteUrl }}</td>
+          <td>{{ file.id.split('-')[0] }}</td>
+          <td>{{ file.uploadState }}</td>
+          <td>{{ file.localPath }}</td>
+          <td>{{ file.remoteUrl }}</td>
         </tr>
       </tbody>
     </table>
 
     <h2>Local Files</h2>
-    <table border="1" style="border-collapse: collapse;">
+    <table>
       <thead>
         <tr>
-          <th style="text-align: left; padding: 4px 8px;">ID</th>
-          <th style="text-align: left; padding: 4px 8px;">OPFS Key</th>
-          <th style="text-align: left; padding: 4px 8px;">Download</th>
-          <th style="text-align: left; padding: 4px 8px;">Upload</th>
+          <th>ID</th>
+          <th>OPFS Key</th>
+          <th>Download</th>
+          <th>Upload</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(localFile, fileId) in localFiles" :key="fileId">
-          <td style="padding: 4px 8px;">{{ fileId.split('-')[0] }}</td>
-          <td style="padding: 4px 8px;">{{ localFile.opfsKey }}</td>
-          <td style="padding: 4px 8px;">{{ localFile.downloadStatus }}</td>
-          <td style="padding: 4px 8px;">{{ localFile.uploadStatus }}</td>
+          <td>{{ fileId.split('-')[0] }}</td>
+          <td>{{ localFile.opfsKey }}</td>
+          <td>{{ localFile.downloadStatus }}</td>
+          <td>{{ localFile.uploadStatus }}</td>
         </tr>
       </tbody>
     </table>
   </div>
 </template>
+
+<style scoped>
+@reference "../style.css";
+
+table {
+  @apply border-[1px] mb-4 w-full;
+}
+
+h2 {
+  @apply text-lg font-bold mb-2;
+}
+
+th {
+  @apply text-left px-2 py-1 border-[1px];
+}
+
+td {
+  @apply px-2 py-1 border-[1px];
+}
+</style>
