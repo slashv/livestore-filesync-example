@@ -110,14 +110,11 @@ export const fileSync = () => {
       }
     })
     const fileActionResults = await Promise.all(fileActionPromises)
-    const newLocalFileState = {
+    store.commit(events.localFileStateSet({ localFiles: {
       ...localFiles,
       ...Object.assign({}, ...fileActionResults.filter(Boolean))
-    }
-    console.log('fileActionResults', fileActionResults)
-    console.log('currentLocalFileState', localFiles)
-    console.log('newLocalFileState', newLocalFileState)
-    store.commit(events.localFileStateSet({ localFiles: newLocalFileState }))
+      }
+    }))
   }
 
   return {
