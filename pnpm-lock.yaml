@@ -42,6 +42,9 @@ importers:
         specifier: github:slashv/vue-livestore
         version: https://codeload.github.com/slashv/vue-livestore/tar.gz/43c6c19d096c0ec166f96211662b5f90bea84b4c(353b4eb77ab6e1121d1cea6433158aef)
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20251001.0
+        version: 4.20251001.0
       '@vitejs/plugin-vue':
         specifier: ^6.0.1
         version: 6.0.1(vite@7.1.7(jiti@2.6.0)(lightningcss@1.30.1)(yaml@2.8.1))(vue@3.5.21(typescript@5.8.3))
@@ -202,6 +205,9 @@ packages:
   '@babel/types@7.28.4':
     resolution: {integrity: sha512-bkFqkLhh3pMBUQQkpVgWDWq/lqzc2678eUyDlTBhRqhCHFguYYGM0Efga7tYk4TogG/3x0EEl66/OQ+WGbWB/Q==}
     engines: {node: '>=6.9.0'}
+
+  '@cloudflare/workers-types@4.20251001.0':
+    resolution: {integrity: sha512-MXseDjmqL1hIdQCqwHDMG8SE60W4FdwqLsofZjo/KtLH9zFcoQfZkCYyQrdfEJINiSoNJjrup7WR6KsqiFUSsg==}
 
   '@effect/cli@0.61.4':
     resolution: {integrity: sha512-MZgeRuV0m6SANHIIXc6fbz69XNbYe79gkyCEN2z3Z6+dSwW/yxzY2pSv5zRAaN5bS/BWYfP1wnThQEkQtwtcxw==}
@@ -1882,6 +1888,8 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+
+  '@cloudflare/workers-types@4.20251001.0': {}
 
   '@effect/cli@0.61.4(@effect/platform@0.82.4(effect@3.15.2))(@effect/printer-ansi@0.43.2(@effect/typeclass@0.34.2(effect@3.15.2))(effect@3.15.2))(@effect/printer@0.43.2(@effect/typeclass@0.34.2(effect@3.15.2))(effect@3.15.2))(effect@3.15.2)':
     dependencies:

@@ -4,7 +4,7 @@ export const remoteFileStorage = () => {
     const formData = new FormData()
     formData.append('file', file)
 
-    const uploadUrl = import.meta.env.VITE_D3_UPLOAD_URL || '/api/upload'
+    const uploadUrl = import.meta.env.VITE_UPLOAD_URL || '/api/upload'
     const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData

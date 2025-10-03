@@ -17,6 +17,10 @@ database_name = "livestore-template-db"
 database_id = "abdd302d-bd6b-4749-a81a-15bc8cf41316"
 # database_id = "${LIVESTORE_CF_SYNC_DATABASE_ID}"
 
+[[r2_buckets]]
+binding = "FILE_BUCKET"
+bucket_name = "livestore-files"
+
 [vars]
 # should be set via CF dashboard (as secret)
 # ADMIN_SECRET = "..."

@@ -109,8 +109,15 @@ export const fileSync = () => {
         return uploadLocalFile(fileId, localFile)
       }
     })
-    const fileActionResults = await Promise.all(fileActionPromises) as unknown as typeof localFilesStateSchema.Type
-    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...fileActionResults } }))
+    const fileActionResults = await Promise.all(fileActionPromises)
+    const newLocalFileState = {
+      ...localFiles,
+      ...Object.assign({}, ...fileActionResults.filter(Boolean))
+    }
+    console.log('fileActionResults', fileActionResults)
+    console.log('currentLocalFileState', localFiles)
+    console.log('newLocalFileState', newLocalFileState)
+    store.commit(events.localFileStateSet({ localFiles: newLocalFileState }))
   }
 
   return {
