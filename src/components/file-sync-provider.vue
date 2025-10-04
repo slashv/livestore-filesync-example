@@ -10,7 +10,7 @@ const { updateLocalFileState, syncFiles } = fileSync()
 const { store } = useStore()
 const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
 
-watch(files, () => {
+watch(() => files.value.length, () => {
   console.log('files changed', files.value.length)
   updateLocalFileState()
   syncFiles()

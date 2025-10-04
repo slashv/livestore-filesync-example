@@ -58,11 +58,13 @@ export const fileSync = () => {
   }
 
   const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFileInst>> => {
+    console.log('downloading remote file', fileId)
     const fileInst = store.query(queryDb(tables.files.where({ id: fileId }).first()))
     if (!fileInst) {
       throw new Error(`File: ${fileId} not found`)
     }
     const file = await downloadFile(fileInst.remoteUrl)
+    console.log('downloaded remote file', file.name, file)
     _setLocalFileDownloadStatus(fileId, 'inProgress')
     await writeFile(file.name, file)
     return {
@@ -77,6 +79,7 @@ export const fileSync = () => {
   }
 
   const uploadLocalFile = async (fileId: string, localFile: LocalFileInst): Promise<Record<string, LocalFileInst>> => {
+    console.log('uploading local file', fileId)
     const file = await readFile(localFile.opfsKey)
     _setLocalFileUploadStatus(fileId, 'inProgress')
     const remoteUrl = await uploadFile(file)
@@ -100,12 +103,13 @@ export const fileSync = () => {
   const deleteLocalFile = async (fileId: string) => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     if (fileId in localFiles) {
+      console.log('deleting local file', fileId)
       store.commit(events.localFileStateSet({
         localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
       }))
+      const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+      return deleteFile(file.localPath)
     }
-    const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    return deleteFile(file.localPath)
   }
 
   const syncFiles = async () => {

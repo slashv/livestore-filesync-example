@@ -45,8 +45,6 @@ export const fileStorage = () => {
         }
       }
     }))
-
-    syncFiles()
     return fileId
   }
 
