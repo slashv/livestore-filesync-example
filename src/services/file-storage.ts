@@ -4,13 +4,11 @@ import { localFileStorage } from './local-file-storage'
 import { remoteFileStorage } from './remote-file-storage'
 import { queryDb } from '@livestore/livestore'
 import { tables, events } from '../livestore/schema'
-import { fileSync } from '../services/file-sync'
 
 export const fileStorage = () => {
   const { store } = useStore()
   const { writeFile, getFileUrl, deleteFile: deleteLocalFile } = localFileStorage()
   const { deleteFile: deleteRemoteFile } = remoteFileStorage()
-  const { syncFiles } = fileSync()
 
   const saveFile = async (file: File): Promise<string> => {
     const path = file.name
@@ -25,7 +23,6 @@ export const fileStorage = () => {
     // Create file instance in DB
     store.commit(events.fileCreated({
       id: fileId,
-      uploadState: 'pending',
       localPath: path,
       contentHash: fileHash,
       createdAt: new Date(),
@@ -58,8 +55,16 @@ export const fileStorage = () => {
       localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
     }))
     // Delete file from local and remote storage
-    await deleteLocalFile(file.localPath)
-    await deleteRemoteFile(file.remoteUrl)
+    try {
+      await deleteLocalFile(file.localPath)
+    } catch(e) {
+      console.error('Error deleting local file', e)
+    }
+    try {
+      await deleteRemoteFile(file.remoteUrl)
+    } catch(e) {
+      console.error('Error deleting remote file', e)
+    }
   }
 
   const fileUrl = async (fileId: string): Promise<string> => {

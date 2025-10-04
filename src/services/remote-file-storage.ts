@@ -9,6 +9,7 @@ export const remoteFileStorage = () => {
       method: 'POST',
       body: formData
     })
+    // console.log('upload response', response)
 
     if (!response.ok) {
       throw new Error(`Upload failed: ${response.statusText}`)
@@ -20,11 +21,16 @@ export const remoteFileStorage = () => {
 
   const downloadFile = async (url: string): Promise<File> => {
       const response = await fetch(url)
+      // console.log('downloaded file response', response)
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`)
       }
-      const file = await response.blob() as File
-      return new File([file], file.name, { type: file.type })
+      const blob = await response.blob()
+      const filename = url.split('/').pop() ?? 'noname'
+      const type = blob.type || response.headers.get('content-type') || ''
+      const file = new File([blob], filename, { type, lastModified: Date.now() })
+      // console.log('downloaded file', type, file.name, file)
+      return file
   }
 
   const deleteFile = async (url: string): Promise<void> => {

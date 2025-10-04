@@ -1,10 +1,13 @@
 import { Events, makeSchema, Schema, SessionIdSymbol, State } from '@livestore/livestore'
 
+export const transferStatus = Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error')
+export type TransferStatus = typeof transferStatus.Type
+
 export const localFileState = Schema.Struct({
   opfsKey: Schema.String,
   localHash: Schema.String,
-  downloadStatus: Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error'),
-  uploadStatus: Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error'),
+  downloadStatus: transferStatus,
+  uploadStatus: transferStatus,
   lastSyncError: Schema.String
 })
 
@@ -30,7 +33,6 @@ export const tables = {
     name: 'files',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      uploadState: State.SQLite.text(),
       remoteUrl: State.SQLite.text({ default: '' }),
       localPath: State.SQLite.text({ default: '' }),
       contentHash: State.SQLite.text({ default: '' }),
@@ -84,7 +86,6 @@ export const events = {
     name: 'v1.FileCreated',
     schema: Schema.Struct({
       id: Schema.String,
-      uploadState: Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error'),
       localPath: Schema.String,
       contentHash: Schema.String,
       createdAt: Schema.Date,
@@ -95,7 +96,6 @@ export const events = {
     name: 'v1.FileUpdated',
     schema: Schema.Struct({
       id: Schema.String,
-      uploadState: Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error'),
       remoteUrl: Schema.String,
       localPath: Schema.String,
       contentHash: Schema.String,
@@ -115,10 +115,10 @@ const materializers = State.SQLite.materializers(events, {
   'v1.ImageCreated': ({ id, title, fileId }) => tables.images.insert({ id, title, fileId }),
   'v1.ImageUpdated': ({ id, title }) => tables.images.update({ title }).where({ id }),
   'v1.ImageDeleted': ({ id, deletedAt }) => tables.images.update({ deletedAt }).where({ id }),
-  'v1.FileCreated': ({ id, uploadState, localPath, contentHash, createdAt, updatedAt }) =>
-    tables.files.insert({ id, uploadState, localPath, contentHash, createdAt, updatedAt }),
-  'v1.FileUpdated': ({ id, uploadState, remoteUrl, contentHash, updatedAt }) =>
-    tables.files.update({ uploadState, remoteUrl, contentHash, updatedAt }).where({ id }),
+  'v1.FileCreated': ({ id, localPath, contentHash, createdAt, updatedAt }) =>
+    tables.files.insert({ id, localPath, contentHash, createdAt, updatedAt }),
+  'v1.FileUpdated': ({ id, remoteUrl, contentHash, updatedAt }) =>
+    tables.files.update({ remoteUrl, contentHash, updatedAt }).where({ id }),
   'v1.FileDeleted': ({ id, deletedAt }) => tables.files.update({ deletedAt }).where({ id }),
 })
 
