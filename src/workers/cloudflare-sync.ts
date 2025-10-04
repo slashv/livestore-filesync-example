@@ -12,7 +12,7 @@ export class WebSocketServer extends makeDurableObject({
 const livestoreWorker = makeWorker({
   validatePayload: (payload: any) => {
     if (payload?.authToken !== 'very-secret-token-pizza') {
-      throw new Error("Invalid auth token")
+      throw new Error(`Invalid auth token: ${payload?.authToken}`)
     }
   },
   enableCORS: true
@@ -34,7 +34,7 @@ export default {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type'
         }
       })
@@ -85,6 +85,24 @@ export default {
         })
       } catch (error: any) {
         return new Response(`Download failed: ${error.message}`, { status: 500 })
+      }
+    }
+
+    // Handle file delete
+    if (url.pathname.startsWith('/api/files/') && request.method === 'DELETE') {
+      const fileKey = url.pathname.replace('/api/files/', '')
+
+      try {
+        await env.FILE_BUCKET.delete(fileKey)
+
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*'
+          }
+        })
+      } catch (error: any) {
+        return new Response(`Delete failed: ${error.message}`, { status: 500 })
       }
     }
 

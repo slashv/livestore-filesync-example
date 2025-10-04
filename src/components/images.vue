@@ -3,9 +3,12 @@ import { queryDb } from '@livestore/livestore'
 import { useStore } from 'vue-livestore'
 import { tables, events } from '../livestore/schema'
 import { fileStorage } from '../services/file-storage'
+import ImageDisplay from './image-display.vue'
+
+type ImageInst = typeof tables.images.rowSchema.Type
 
 const { store } = useStore()
-const { saveFile } = fileStorage()
+const { saveFile, deleteFile } = fileStorage()
 
 const images = store.useQuery(queryDb(tables.images.where({ deletedAt: null })))
 
@@ -18,6 +21,11 @@ async function addImage(e: any) {
     fileId: fileId
   }))
 }
+
+async function deleteImage(image: ImageInst) {
+  await deleteFile(image.fileId)
+  store.commit(events.imageDeleted({ id: image.id, deletedAt: new Date() }))
+}
 </script>
 
 <template>
@@ -29,9 +37,14 @@ async function addImage(e: any) {
       @change="addImage($event)"
       accept="image/*"
     />
-    <div v-for="image in images" :key="image.id">
-      {{ image }}
-      <!-- <ImageDisplay :image="image" /> -->
+    <div class="flex gap-4">
+      <div v-for="image in images" :key="image.id" class="w-[400px]">
+        <button @click="deleteImage(image)">Delete</button>
+        <Suspense>
+          <ImageDisplay :image="image" />
+          <template #fallback>Loading img..</template>
+        </Suspense>
+      </div>
     </div>
   </div>
 </template>

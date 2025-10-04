@@ -5,7 +5,7 @@ import { tables } from '../livestore/schema'
 
 const { store } = useStore()
 
-const files = store.useQuery(queryDb(tables.files.select()))
+const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
 const { localFiles } = store.useClientDocument(tables.localFileState)
 </script>
 

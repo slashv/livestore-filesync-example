@@ -27,8 +27,19 @@ export const remoteFileStorage = () => {
       return new File([file], file.name, { type: file.type })
   }
 
+  const deleteFile = async (url: string): Promise<void> => {
+    const response = await fetch(url, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Delete failed: ${response.statusText}`)
+    }
+  }
+
   return {
     uploadFile,
-    downloadFile
+    downloadFile,
+    deleteFile
   }
 }

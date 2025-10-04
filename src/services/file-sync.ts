@@ -14,27 +14,26 @@ type FileInst = typeof tables.files.rowSchema.Type
 
 export const fileSync = () => {
   const { store } = useStore()
-  const { fileExists, writeFile, readFile } = localFileStorage()
+  const { fileExists, writeFile, readFile, deleteFile } = localFileStorage()
   const { downloadFile, uploadFile } = remoteFileStorage()
 
   const _localFileValid = async (localFile: LocalFileInst, file: FileInst): Promise<boolean> => {
       const schemaMatches = Schema.is(localFileStateSchema)(localFile)
       const contentMatch = file.contentHash === localFile.localHash
-      const fileExsitsLocally = await fileExists(localFile.opfsKey)
-      return schemaMatches && contentMatch && fileExsitsLocally
+      // const fileExsitsLocally = await fileExists(localFile.opfsKey)
+      return schemaMatches && contentMatch // && fileExsitsLocally
   }
 
-  const updateLocalFileState = async () => {
+  const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
 
     const newLocalFileState: LocalFilesState = {}
     files.forEach(async (file) => {
-      if (file.id in localFiles) {
-        const _localFile = localFiles[file.id]!
-        if (await _localFileValid(_localFile, file)) {
-          newLocalFileState[file.id] = _localFile
-        }
+      const localFilePresent = file.id in localFiles
+      // const localFileValid = localFilePresent && await _localFileValid(localFiles[file.id]!, file)
+      if (localFilePresent) {
+        newLocalFileState[file.id] = localFiles[file.id]!
       } else {
         newLocalFileState[file.id] = {
           opfsKey: '',
@@ -44,8 +43,8 @@ export const fileSync = () => {
           lastSyncError: ''
         }
       }
-      store.commit(events.localFileStateSet({ ...newLocalFileState }))
     })
+    store.commit(events.localFileStateSet({ localFiles: newLocalFileState }))
   }
 
   const _setLocalFileUploadStatus = (fileId: string, status: LocalFileInst['uploadStatus']) => {
@@ -98,6 +97,17 @@ export const fileSync = () => {
     }
   }
 
+  const deleteLocalFile = async (fileId: string) => {
+    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+    if (fileId in localFiles) {
+      store.commit(events.localFileStateSet({
+        localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
+      }))
+    }
+    const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+    return deleteFile(file.localPath)
+  }
+
   const syncFiles = async () => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     const fileActionPromises = Object.entries(localFiles).map(async ([fileId, localFile]) => {
@@ -109,6 +119,13 @@ export const fileSync = () => {
         return uploadLocalFile(fileId, localFile)
       }
     })
+
+    const deletedFiles = store.query(queryDb(tables.files.where('deletedAt', '!=', null)))
+    const deletedFilesPromises = deletedFiles.map(async (file) => {
+      return deleteLocalFile(file.id)
+    })
+    await Promise.all(deletedFilesPromises)
+
     const fileActionResults = await Promise.all(fileActionPromises)
     store.commit(events.localFileStateSet({ localFiles: {
       ...localFiles,

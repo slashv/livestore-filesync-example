@@ -6,6 +6,7 @@ import { schema } from './livestore/schema'
 import { LiveStoreProvider } from 'vue-livestore'
 import Images from './components/images.vue'
 import Debug from './components/debug.vue'
+import FileSyncProvider from './components/file-sync-provider.vue'
 
 const adapter = makePersistedAdapter({
   storage: { type: 'opfs' },
@@ -16,7 +17,8 @@ const adapter = makePersistedAdapter({
 const storeOptions = {
   schema,
   adapter,
-  storeId: 'vue-livestore-filesync-2',
+  storeId: 'vue-livestore-filesync-3',
+  syncPayload: { authToken: 'very-secret-token-pizza' }
 }
 </script>
 
@@ -25,9 +27,11 @@ const storeOptions = {
     <template #loading>
       <div>Loading LiveStore...</div>
     </template>
-    <div class="flex flex-col gap-4 p-6">
-      <Images />
-      <Debug />
-    </div>
+    <FileSyncProvider>
+      <div class="flex flex-col gap-4 p-6">
+        <Images />
+        <Debug />
+      </div>
+    </FileSyncProvider>
   </LiveStoreProvider>
 </template>

@@ -46,6 +46,11 @@ export const localFileStorage = () => {
     }
   }
 
+  const deleteFile = async (path: string): Promise<void> => {
+    const { dir, name } = await getParentDirectory(path, { create: false })
+    await dir.removeEntry(name)
+  }
+
   const fileExists = async (path: string): Promise<boolean> => {
     try {
       const { dir, name } = await getParentDirectory(path, { create: false })
@@ -66,6 +71,7 @@ export const localFileStorage = () => {
     writeFile,
     readFile,
     getFileUrl,
-    fileExists
+    fileExists,
+    deleteFile
   }
 }
