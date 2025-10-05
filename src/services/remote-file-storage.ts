@@ -4,7 +4,8 @@ export const remoteFileStorage = () => {
     const formData = new FormData()
     formData.append('file', file)
 
-    const uploadUrl = import.meta.env.VITE_UPLOAD_URL || '/api/upload'
+    const baseUrl = import.meta.env.VITE_WORKER_API_URL || 'http://localhost:8787/api'
+    const uploadUrl = `${baseUrl}/upload`
     const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData

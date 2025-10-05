@@ -8,6 +8,7 @@ import { tables, events } from '../livestore/schema'
 import type { LocalFile, LocalFilesState, TransferStatus } from '../types'
 import { createSyncExecutor } from '../services/sync-executor'
 
+
 export const fileSync = () => {
   const { store } = useStore()
   const { writeFile, readFile, deleteFile } = localFileStorage()
@@ -159,7 +160,8 @@ export const fileSync = () => {
       const controller = new AbortController()
       const timeoutId = window.setTimeout(() => controller.abort(), 3000)
       try {
-        const res = await fetch('/api/health', { method: 'GET', cache: 'no-store', signal: controller.signal })
+        const baseUrl = import.meta.env.VITE_WORKER_API_URL || 'http://localhost:8787/api'
+        const res = await fetch(`${baseUrl}/health`, { method: 'GET', cache: 'no-store', signal: controller.signal })
         if (res.ok) {
           if (!online) { online = true; executor.resume() }
         } else {
