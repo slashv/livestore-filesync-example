@@ -6,7 +6,7 @@ import { hashFile, makeStoredPathForId } from '../utils/file.utils'
 import { useStore } from 'vue-livestore'
 import { queryDb } from '@livestore/livestore'
 import { tables, events, localFileState as localFileStateSchema, localFilesState as localFilesStateSchema, type TransferStatus } from '../livestore/schema'
-import { createSyncExecutor, type TransferKind } from '../services/sync-executor'
+import { createSyncExecutor } from '../services/sync-executor'
 
 const localFileStateSchemaMutable = Schema.mutable(localFileStateSchema)
 type LocalFileInst = typeof localFileStateSchemaMutable.Type
@@ -58,41 +58,22 @@ export const fileSync = () => {
     store.commit(events.localFileStateSet({ localFiles: nextLocalFilesState }))
   }
 
-  const _setLocalFileUploadStatus = (fileId: string, status: TransferStatus) => {
+  const _setLocalFileTransferStatus = (fileId: string, action: 'upload' | 'download', status: TransferStatus) => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     const localFile = localFiles[fileId]
     if (!localFile) return
-    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, uploadStatus: status } } }))
-  }
-
-  const _setLocalFileDownloadStatus = (fileId: string, status: LocalFileInst['downloadStatus']) => {
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    const localFile = localFiles[fileId]
-    if (!localFile) return
-    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, downloadStatus: status } } }))
-  }
-
-  const _queueStatus = (fileId: string, kind: TransferKind) => {
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    const localFile = localFiles[fileId]
-    if (!localFile) return
-    if (kind === 'download' && localFile.downloadStatus !== 'done') {
-      store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, downloadStatus: 'queued' } } }))
-    }
-    if (kind === 'upload' && localFile.uploadStatus !== 'done') {
-      store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, uploadStatus: 'queued' } } }))
-    }
+    const field = action === 'upload' ? 'uploadStatus' : 'downloadStatus'
+    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, [field]: status } } }))
   }
 
   const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFileInst>> => {
-    console.log('downloading remote file', fileId)
     const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
     if (!fileInstance) {
       throw new Error(`File: ${fileId} not found`)
     }
     const file = await downloadFile(fileInstance.remoteUrl)
     console.log('downloaded remote file', file.name, file)
-    _setLocalFileDownloadStatus(fileId, 'inProgress')
+    _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
     const { path } = makeStoredPathForId(fileId, file.name)
     await writeFile(path, file)
     return {
@@ -109,7 +90,7 @@ export const fileSync = () => {
   const uploadLocalFile = async (fileId: string, localFile: LocalFileInst): Promise<Record<string, LocalFileInst>> => {
     console.log('uploading local file', fileId)
     const file = await readFile(localFile.path)
-    _setLocalFileUploadStatus(fileId, 'inProgress')
+    _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')
     const remoteUrl = await uploadFile(file)
     console.log('uploaded local file', file.name, remoteUrl)
     store.commit(events.fileUpdated({
@@ -152,22 +133,21 @@ export const fileSync = () => {
     }
   }
 
-  // Executor is created after helpers to avoid temporal dead zones
   const executor = createSyncExecutor({
     maxConcurrentPerKind: { download: 2, upload: 2 },
     isOnline: () => online,
     run: async (kind, fileId) => {
       if (kind === 'download') {
-        _setLocalFileDownloadStatus(fileId, 'inProgress')
-        const partial = await _withFailure(fileId, () => downloadRemoteFile(fileId), (status) => _setLocalFileDownloadStatus(fileId, status))
+        _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
+        const partial = await _withFailure(fileId, () => downloadRemoteFile(fileId), (status) => _setLocalFileTransferStatus(fileId, 'download', status))
         const { localFiles } = store.query(queryDb(tables.localFileState.get()))
         store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...partial } }))
       } else {
         const { localFiles } = store.query(queryDb(tables.localFileState.get()))
         const localFile = localFiles[fileId]
         if (!localFile) return
-        _setLocalFileUploadStatus(fileId, 'inProgress')
-        const partial = await _withFailure(fileId, () => uploadLocalFile(fileId, localFile), (status) => _setLocalFileUploadStatus(fileId, status))
+        _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')
+        const partial = await _withFailure(fileId, () => uploadLocalFile(fileId, localFile), (status) => _setLocalFileTransferStatus(fileId, 'upload', status))
         const { localFiles: currentLocalFiles } = store.query(queryDb(tables.localFileState.get()))
         store.commit(events.localFileStateSet({ localFiles: { ...currentLocalFiles, ...partial } }))
       }
@@ -202,11 +182,11 @@ export const fileSync = () => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     Object.entries(localFiles).forEach(([fileId, localFile]) => {
       if (localFile.downloadStatus === 'pending' || localFile.downloadStatus === 'queued') {
-        _queueStatus(fileId, 'download')
+        _setLocalFileTransferStatus(fileId, 'download', 'queued')
         executor.enqueue('download', fileId)
       }
       if (localFile.uploadStatus === 'pending' || localFile.uploadStatus === 'queued') {
-        _queueStatus(fileId, 'upload')
+        _setLocalFileTransferStatus(fileId, 'upload', 'queued')
         executor.enqueue('upload', fileId)
       }
     })
