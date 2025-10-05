@@ -2,10 +2,11 @@
 import { queryDb } from '@livestore/livestore'
 import { useStore } from 'vue-livestore'
 import { tables, events } from '../livestore/schema'
+import type { Image } from '../types'
 import { fileStorage } from '../services/file-storage'
 import ImageDisplay from './image-display.vue'
 
-type ImageInst = typeof tables.images.rowSchema.Type
+type ImageInst = Image
 
 const { store } = useStore()
 const { saveFile, deleteFile } = fileStorage()

@@ -1,17 +1,12 @@
-import { Schema } from '@livestore/livestore'
 import { watch, computed } from 'vue'
 import { localFileStorage } from '../services/local-file-storage'
 import { remoteFileStorage } from '../services/remote-file-storage'
 import { hashFile, makeStoredPathForId } from '../utils/file.utils'
 import { useStore } from 'vue-livestore'
 import { queryDb } from '@livestore/livestore'
-import { tables, events, localFileState as localFileStateSchema, localFilesState as localFilesStateSchema, type TransferStatus } from '../livestore/schema'
+import { tables, events } from '../livestore/schema'
+import type { LocalFile, LocalFilesState, TransferStatus } from '../types'
 import { createSyncExecutor } from '../services/sync-executor'
-
-const localFileStateSchemaMutable = Schema.mutable(localFileStateSchema)
-type LocalFileInst = typeof localFileStateSchemaMutable.Type
-const localFilesStateSchemaMutable = Schema.mutable(localFilesStateSchema)
-type LocalFilesState = typeof localFilesStateSchemaMutable.Type
 
 export const fileSync = () => {
   const { store } = useStore()
@@ -66,7 +61,7 @@ export const fileSync = () => {
     store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, [field]: status } } }))
   }
 
-  const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFileInst>> => {
+  const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFile>> => {
     const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
     if (!fileInstance) {
       throw new Error(`File: ${fileId} not found`)
@@ -87,7 +82,7 @@ export const fileSync = () => {
     }
   }
 
-  const uploadLocalFile = async (fileId: string, localFile: LocalFileInst): Promise<Record<string, LocalFileInst>> => {
+  const uploadLocalFile = async (fileId: string, localFile: LocalFile): Promise<Record<string, LocalFile>> => {
     console.log('uploading local file', fileId)
     const file = await readFile(localFile.path)
     _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')

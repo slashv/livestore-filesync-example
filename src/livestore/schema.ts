@@ -1,7 +1,6 @@
 import { Events, makeSchema, Schema, SessionIdSymbol, State } from '@livestore/livestore'
 
 export const transferStatus = Schema.Literal('pending', 'queued', 'inProgress', 'done', 'error')
-export type TransferStatus = typeof transferStatus.Type
 
 export const localFileState = Schema.Struct({
   path: Schema.String,

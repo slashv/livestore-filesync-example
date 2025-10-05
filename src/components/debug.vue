@@ -40,6 +40,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <th>Download Status</th>
           <th>Upload Status</th>
           <th>Local Hash</th>
+          <th>Last Sync Error</th>
         </tr>
       </thead>
       <tbody>
@@ -49,6 +50,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <td>{{ localFile.downloadStatus }}</td>
           <td>{{ localFile.uploadStatus }}</td>
           <td>{{ localFile.localHash }}</td>
+          <td>{{ localFile.lastSyncError }}</td>
         </tr>
       </tbody>
     </table>
