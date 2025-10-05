@@ -16,8 +16,6 @@ export const fileSync = () => {
   const { writeFile, readFile, deleteFile } = localFileStorage()
   const { downloadFile, uploadFile } = remoteFileStorage()
 
-
-
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))

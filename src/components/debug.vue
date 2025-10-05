@@ -18,6 +18,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <th>ID</th>
           <th>Local Path</th>
           <th>Remote URL</th>
+          <th>Content Hash</th>
         </tr>
       </thead>
       <tbody>
@@ -25,6 +26,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <td>{{ file.id.split('-')[0] }}</td>
           <td>{{ file.localPath }}</td>
           <td>{{ file.remoteUrl }}</td>
+          <td>{{ file.contentHash }}</td>
         </tr>
       </tbody>
     </table>
@@ -37,6 +39,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <th>OPFS Key</th>
           <th>Download Status</th>
           <th>Upload Status</th>
+          <th>Local Hash</th>
         </tr>
       </thead>
       <tbody>
@@ -45,6 +48,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
           <td>{{ localFile.path }}</td>
           <td>{{ localFile.downloadStatus }}</td>
           <td>{{ localFile.uploadStatus }}</td>
+          <td>{{ localFile.localHash }}</td>
         </tr>
       </tbody>
     </table>

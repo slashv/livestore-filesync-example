@@ -15,7 +15,6 @@ const watchTrigger = computed(
 )
 
 watch(() => watchTrigger.value, () => {
-  console.log('files changed', watchTrigger.value)
   updateLocalFileState()
   syncFiles()
 })
