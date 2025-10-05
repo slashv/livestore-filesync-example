@@ -9,15 +9,6 @@ export class WebSocketServer extends makeDurableObject({
   },
 }) {}
 
-const livestoreWorker = makeWorker({
-  validatePayload: (payload: any) => {
-    if (payload?.authToken !== 'very-secret-token-pizza') {
-      throw new Error(`Invalid auth token: ${payload?.authToken}`)
-    }
-  },
-  enableCORS: true
-})
-
 interface Env {
   FILE_BUCKET: R2Bucket
   WEBSOCKET_SERVER: DurableObjectNamespace
@@ -130,6 +121,15 @@ export default {
     }
 
     // Delegate to LiveStore worker for all other requests
+    const livestoreWorker = makeWorker({
+      validatePayload: (payload: any) => {
+        if (payload?.authToken !== env.ADMIN_SECRET) {
+          throw new Error(`Invalid auth token: ${payload?.authToken}`)
+        }
+      },
+      enableCORS: true
+    })
+
     return livestoreWorker.fetch(request, env, ctx)
   }
 }
