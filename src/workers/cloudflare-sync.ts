@@ -41,6 +41,29 @@ export default {
       })
     }
 
+    // Handle health check
+    if (url.pathname === '/api/health' && (request.method === 'GET' || request.method === 'HEAD')) {
+      try {
+        await env.FILE_BUCKET.list({ limit: 1 })
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Cache-Control': 'no-store',
+            'Access-Control-Allow-Origin': '*'
+          }
+        })
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (e) {
+        return new Response('Health check failed', {
+          status: 503,
+          headers: {
+            'Cache-Control': 'no-store',
+            'Access-Control-Allow-Origin': '*'
+          }
+        })
+      }
+    }
+
     // Handle file upload
     if (url.pathname === '/api/upload' && request.method === 'POST') {
       try {

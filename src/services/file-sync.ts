@@ -6,6 +6,7 @@ import { hashFile, makeStoredPathForId } from '../utils/file.utils'
 import { useStore } from 'vue-livestore'
 import { queryDb } from '@livestore/livestore'
 import { tables, events, localFileState as localFileStateSchema, localFilesState as localFilesStateSchema, type TransferStatus } from '../livestore/schema'
+import { createSyncExecutor, type TransferKind } from '../services/sync-executor'
 
 const localFileStateSchemaMutable = Schema.mutable(localFileStateSchema)
 type LocalFileInst = typeof localFileStateSchemaMutable.Type
@@ -18,19 +19,27 @@ export const fileSync = () => {
   const { downloadFile, uploadFile } = remoteFileStorage()
 
   let unwatch: (() => void) | null = null
+  let online = typeof navigator !== 'undefined' ? navigator.onLine : true
+  let connectivityEventsAttached = false
+  let _connectivityIntervalId: number | null = null
 
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
 
-    const newLocalFileState: LocalFilesState = {}
-    files.forEach(async (file) => {
-      const localFilePresent = file.id in localFiles
-      // const localFileValid = localFilePresent && await _localFileValid(localFiles[file.id]!, file)
-      if (localFilePresent) {
-        newLocalFileState[file.id] = localFiles[file.id]!
+    const nextLocalFilesState: LocalFilesState = { ...localFiles }
+    files.forEach((file) => {
+      if (file.id in nextLocalFilesState) {
+        const localFile = nextLocalFilesState[file.id]!
+        nextLocalFilesState[file.id] = {
+          path: localFile.path ?? '',
+          localHash: localFile.localHash ?? '',
+          downloadStatus: localFile.downloadStatus ?? 'done',
+          uploadStatus: localFile.uploadStatus ?? 'done',
+          lastSyncError: localFile.lastSyncError ?? ''
+        }
       } else if (file.remoteUrl) {
-        newLocalFileState[file.id] = {
+        nextLocalFilesState[file.id] = {
           path: '',
           localHash: '',
           downloadStatus: 'pending',
@@ -39,26 +48,49 @@ export const fileSync = () => {
         }
       }
     })
-    store.commit(events.localFileStateSet({ localFiles: newLocalFileState }))
+
+    Object.keys(nextLocalFilesState).forEach((fileId) => {
+      if (!files.find((f) => f.id === fileId)) {
+        delete nextLocalFilesState[fileId]
+      }
+    })
+
+    store.commit(events.localFileStateSet({ localFiles: nextLocalFilesState }))
   }
 
   const _setLocalFileUploadStatus = (fileId: string, status: TransferStatus) => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    store.commit(events.localFileStateSet({ ...localFiles, [fileId]: { ...localFiles[fileId], uploadStatus: status } }))
+    const localFile = localFiles[fileId]
+    if (!localFile) return
+    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, uploadStatus: status } } }))
   }
 
   const _setLocalFileDownloadStatus = (fileId: string, status: LocalFileInst['downloadStatus']) => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    store.commit(events.localFileStateSet({ ...localFiles, [fileId]: { ...localFiles[fileId], downloadStatus: status } }))
+    const localFile = localFiles[fileId]
+    if (!localFile) return
+    store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, downloadStatus: status } } }))
+  }
+
+  const _queueStatus = (fileId: string, kind: TransferKind) => {
+    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+    const localFile = localFiles[fileId]
+    if (!localFile) return
+    if (kind === 'download' && localFile.downloadStatus !== 'done') {
+      store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, downloadStatus: 'queued' } } }))
+    }
+    if (kind === 'upload' && localFile.uploadStatus !== 'done') {
+      store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, uploadStatus: 'queued' } } }))
+    }
   }
 
   const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFileInst>> => {
     console.log('downloading remote file', fileId)
-    const fileInst = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    if (!fileInst) {
+    const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+    if (!fileInstance) {
       throw new Error(`File: ${fileId} not found`)
     }
-    const file = await downloadFile(fileInst.remoteUrl)
+    const file = await downloadFile(fileInstance.remoteUrl)
     console.log('downloaded remote file', file.name, file)
     _setLocalFileDownloadStatus(fileId, 'inProgress')
     const { path } = makeStoredPathForId(fileId, file.name)
@@ -94,6 +126,20 @@ export const fileSync = () => {
     }
   }
 
+  const _withFailure = async <T>(fileId: string, run: () => Promise<T>, setStatus: (status: TransferStatus) => void) => {
+    try {
+      return await run()
+    } catch (error: any) {
+      const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+      const localFile = localFiles[fileId]
+      if (localFile) {
+        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, lastSyncError: String(error?.message ?? error) } } }))
+        setStatus('pending')
+      }
+      throw error
+    }
+  }
+
   const deleteLocalFile = async (fileId: string) => {
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     if (fileId in localFiles) {
@@ -106,35 +152,73 @@ export const fileSync = () => {
     }
   }
 
-  const syncFiles = async () => {
-    // Remote files that require download
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    const fileActionPromises = Object.entries(localFiles).map(async ([fileId, localFile]) => {
-      if (localFile.downloadStatus === 'pending') {
-        _setLocalFileDownloadStatus(fileId, 'queued')
-        return downloadRemoteFile(fileId)
-      } else if (localFile.uploadStatus === 'pending') {
+  // Executor is created after helpers to avoid temporal dead zones
+  const executor = createSyncExecutor({
+    maxConcurrentPerKind: { download: 2, upload: 2 },
+    isOnline: () => online,
+    run: async (kind, fileId) => {
+      if (kind === 'download') {
+        _setLocalFileDownloadStatus(fileId, 'inProgress')
+        const partial = await _withFailure(fileId, () => downloadRemoteFile(fileId), (status) => _setLocalFileDownloadStatus(fileId, status))
+        const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...partial } }))
+      } else {
+        const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+        const localFile = localFiles[fileId]
+        if (!localFile) return
         _setLocalFileUploadStatus(fileId, 'inProgress')
-        return uploadLocalFile(fileId, localFile)
+        const partial = await _withFailure(fileId, () => uploadLocalFile(fileId, localFile), (status) => _setLocalFileUploadStatus(fileId, status))
+        const { localFiles: currentLocalFiles } = store.query(queryDb(tables.localFileState.get()))
+        store.commit(events.localFileStateSet({ localFiles: { ...currentLocalFiles, ...partial } }))
+      }
+    }
+  })
+
+  const attachConnectivityHandlers = () => {
+    if (connectivityEventsAttached) return
+    connectivityEventsAttached = true
+    window.addEventListener('online', () => { online = true; executor.resume() })
+    window.addEventListener('offline', () => { online = false; executor.pause() })
+    const connectivityTickerMs = 10000
+    _connectivityIntervalId = window.setInterval(async () => {
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 3000)
+      try {
+        const res = await fetch('/api/health', { method: 'GET', cache: 'no-store', signal: controller.signal })
+        if (res.ok) {
+          if (!online) { online = true; executor.resume() }
+        } else {
+          if (online) { online = false; executor.pause() }
+        }
+      } catch {
+        if (online) { online = false; executor.pause() }
+      } finally {
+        window.clearTimeout(timeoutId)
+      }
+    }, connectivityTickerMs)
+  }
+
+  const syncFiles = async () => {
+    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+    Object.entries(localFiles).forEach(([fileId, localFile]) => {
+      if (localFile.downloadStatus === 'pending' || localFile.downloadStatus === 'queued') {
+        _queueStatus(fileId, 'download')
+        executor.enqueue('download', fileId)
+      }
+      if (localFile.uploadStatus === 'pending' || localFile.uploadStatus === 'queued') {
+        _queueStatus(fileId, 'upload')
+        executor.enqueue('upload', fileId)
       }
     })
-    // Execute upload & download promises in parallel
-    const fileActionResults = await Promise.all(fileActionPromises)
-    store.commit(events.localFileStateSet({
-      localFiles: {
-        ...localFiles,
-        ...Object.assign({}, ...fileActionResults.filter(Boolean))
-      }
-    }))
-    // Delete files locally that are deleted
     const deletedFiles = store.query(queryDb(tables.files.where('deletedAt', '!=', null)))
     await Promise.all(deletedFiles.map(async (file) => deleteLocalFile(file.id)))
   }
 
   const runFileSync = () => {
     if (unwatch) return
+    attachConnectivityHandlers()
     const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
-    const watchTrigger = computed(() => files.value.map((file) => file.remoteUrl).join(','))
+    const watchTrigger = computed(() => files.value.map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.deletedAt ?? ''}`).join(','))
     unwatch = watch(() => watchTrigger.value, () => {
       updateLocalFileState()
       syncFiles()
