@@ -1,4 +1,5 @@
 import { Schema } from '@livestore/livestore'
+import { watch, computed } from 'vue'
 import { localFileStorage } from '../services/local-file-storage'
 import { remoteFileStorage } from '../services/remote-file-storage'
 import { hashFile, makeStoredPathForId } from '../utils/file.utils'
@@ -15,6 +16,8 @@ export const fileSync = () => {
   const { store } = useStore()
   const { writeFile, readFile, deleteFile } = localFileStorage()
   const { downloadFile, uploadFile } = remoteFileStorage()
+
+  let unwatch: (() => void) | null = null
 
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
@@ -128,8 +131,17 @@ export const fileSync = () => {
     await Promise.all(deletedFiles.map(async (file) => deleteLocalFile(file.id)))
   }
 
+  const runFileSync = () => {
+    if (unwatch) return
+    const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
+    const watchTrigger = computed(() => files.value.map((file) => file.remoteUrl).join(','))
+    unwatch = watch(() => watchTrigger.value, () => {
+      updateLocalFileState()
+      syncFiles()
+    }, { immediate: true })
+  }
+
   return {
-    updateLocalFileState,
-    syncFiles
+    runFileSync
   }
 }

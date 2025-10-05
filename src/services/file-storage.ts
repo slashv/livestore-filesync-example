@@ -14,8 +14,10 @@ export const fileStorage = () => {
     const { id: fileId, path } = makeStoredFilePath(file.name)
     const fileHash = await hashFile(file)
 
+    // Write file to local storage
     await writeFile(path, file)
 
+    // Create file instance in DB
     store.commit(events.fileCreated({
       id: fileId,
       localPath: path,
@@ -23,6 +25,8 @@ export const fileStorage = () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     }))
+
+    // Update local state with new file
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     store.commit(events.localFileStateSet({
       localFiles: {
@@ -36,18 +40,22 @@ export const fileStorage = () => {
         }
       }
     }))
+
     return fileId
   }
 
   const deleteFile = async (fileId: string) => {
     const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+
     // Delete file from DB
     store.commit(events.fileDeleted({ id: fileId, deletedAt: new Date() }))
+
     // Remove file from local state
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     store.commit(events.localFileStateSet({
       localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
     }))
+
     // Delete file from local and remote storage
     try {
       await deleteLocalFile(file.localPath)
@@ -61,15 +69,8 @@ export const fileStorage = () => {
     }
   }
 
-  const fileUrl = async (fileId: string): Promise<string> => {
-    const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    if (!file) throw new Error(`File not found: ${fileId}`)
-    return `/${file.localPath}`
-  }
-
   return {
     saveFile,
-    fileUrl,
     deleteFile
   }
 }
