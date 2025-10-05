@@ -38,8 +38,8 @@ export const localFileStorage = () => {
 
   const readFile = async (path: string): Promise<File> => {
     try {
-      const { dir, name } = await getParentDirectory(path, { create: true })
-      const handle = await dir.getFileHandle(name, { create: true })
+      const { dir, name } = await getParentDirectory(path, { create: false })
+      const handle = await dir.getFileHandle(name, { create: false })
       return await handle.getFile()
     } catch(e) {
       throw new Error(`Unable to read file: ${path} - ${e}`)

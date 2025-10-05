@@ -35,7 +35,8 @@ export default {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+          'Access-Control-Max-Age': '86400'
         }
       })
     }
@@ -47,13 +48,12 @@ export default {
         const file = formData.get('file') as File | null
 
         if (!file) {
-          return new Response('No file provided', { status: 400 })
+          return new Response('No file provided', { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } })
         }
 
-        const fileKey = `${Date.now()}-${file.name}`
-        await env.FILE_BUCKET.put(fileKey, file.stream())
+        await env.FILE_BUCKET.put(file.name, file.stream())
 
-        const fileUrl = `${url.origin}/api/files/${fileKey}`
+        const fileUrl = `${url.origin}/api/files/${file.name}`
 
         return new Response(JSON.stringify({ url: fileUrl }), {
           headers: {
@@ -62,7 +62,7 @@ export default {
           }
         })
       } catch (error: any) {
-        return new Response(`Upload failed: ${error.message}`, { status: 500 })
+        return new Response(`Upload failed: ${error.message}`, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
       }
     }
 
@@ -74,7 +74,7 @@ export default {
         const object = await env.FILE_BUCKET.get(fileKey)
 
         if (!object) {
-          return new Response('File not found', { status: 404 })
+          return new Response('File not found', { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } })
         }
 
         return new Response(object.body, {
@@ -84,7 +84,7 @@ export default {
           }
         })
       } catch (error: any) {
-        return new Response(`Download failed: ${error.message}`, { status: 500 })
+        return new Response(`Download failed: ${error.message}`, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
       }
     }
 
@@ -102,7 +102,7 @@ export default {
           }
         })
       } catch (error: any) {
-        return new Response(`Delete failed: ${error.message}`, { status: 500 })
+        return new Response(`Delete failed: ${error.message}`, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
       }
     }
 

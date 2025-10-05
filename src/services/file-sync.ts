@@ -1,7 +1,7 @@
 import { Schema } from '@livestore/livestore'
 import { localFileStorage } from '../services/local-file-storage'
 import { remoteFileStorage } from '../services/remote-file-storage'
-import { hashFile } from '../utils/file.utils'
+import { hashFile, makeStoredPathForId } from '../utils/file.utils'
 import { useStore } from 'vue-livestore'
 import { queryDb } from '@livestore/livestore'
 import { tables, events, localFileState as localFileStateSchema, localFilesState as localFilesStateSchema, type TransferStatus } from '../livestore/schema'
@@ -10,19 +10,13 @@ const localFileStateSchemaMutable = Schema.mutable(localFileStateSchema)
 type LocalFileInst = typeof localFileStateSchemaMutable.Type
 const localFilesStateSchemaMutable = Schema.mutable(localFilesStateSchema)
 type LocalFilesState = typeof localFilesStateSchemaMutable.Type
-type FileInst = typeof tables.files.rowSchema.Type
 
 export const fileSync = () => {
   const { store } = useStore()
-  const { fileExists, writeFile, readFile, deleteFile } = localFileStorage()
+  const { writeFile, readFile, deleteFile } = localFileStorage()
   const { downloadFile, uploadFile } = remoteFileStorage()
 
-  const _localFileValid = async (localFile: LocalFileInst, file: FileInst): Promise<boolean> => {
-      const schemaMatches = Schema.is(localFileStateSchema)(localFile)
-      const contentMatch = file.contentHash === localFile.localHash
-      // const fileExsitsLocally = await fileExists(localFile.opfsKey)
-      return schemaMatches && contentMatch // && fileExsitsLocally
-  }
+
 
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
@@ -36,7 +30,7 @@ export const fileSync = () => {
         newLocalFileState[file.id] = localFiles[file.id]!
       } else if (file.remoteUrl) {
         newLocalFileState[file.id] = {
-          opfsKey: '',
+          path: '',
           localHash: '',
           downloadStatus: 'pending',
           uploadStatus: 'done',
@@ -66,10 +60,11 @@ export const fileSync = () => {
     const file = await downloadFile(fileInst.remoteUrl)
     console.log('downloaded remote file', file.name, file)
     _setLocalFileDownloadStatus(fileId, 'inProgress')
-    await writeFile(file.name, file)
+    const { path } = makeStoredPathForId(fileId, file.name)
+    await writeFile(path, file)
     return {
       [fileId]: {
-        opfsKey: file.name,
+        path: path,
         localHash: await hashFile(file),
         downloadStatus: 'done',
         uploadStatus: 'done',
@@ -80,14 +75,14 @@ export const fileSync = () => {
 
   const uploadLocalFile = async (fileId: string, localFile: LocalFileInst): Promise<Record<string, LocalFileInst>> => {
     console.log('uploading local file', fileId)
-    const file = await readFile(localFile.opfsKey)
+    const file = await readFile(localFile.path)
     _setLocalFileUploadStatus(fileId, 'inProgress')
     const remoteUrl = await uploadFile(file)
     console.log('uploaded local file', file.name, remoteUrl)
     store.commit(events.fileUpdated({
       id: fileId,
       remoteUrl: remoteUrl,
-      localPath: localFile.opfsKey,
+      localPath: localFile.path,
       contentHash: localFile.localHash,
       updatedAt: new Date(),
     }))

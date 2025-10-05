@@ -42,7 +42,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
       <tbody>
         <tr v-for="(localFile, fileId) in localFiles" :key="fileId">
           <td>{{ fileId.split('-')[0] }}</td>
-          <td>{{ localFile.opfsKey }}</td>
+          <td>{{ localFile.path }}</td>
           <td>{{ localFile.downloadStatus }}</td>
           <td>{{ localFile.uploadStatus }}</td>
         </tr>

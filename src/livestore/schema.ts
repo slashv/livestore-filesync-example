@@ -4,7 +4,7 @@ export const transferStatus = Schema.Literal('pending', 'queued', 'inProgress', 
 export type TransferStatus = typeof transferStatus.Type
 
 export const localFileState = Schema.Struct({
-  opfsKey: Schema.String,
+  path: Schema.String,
   localHash: Schema.String,
   downloadStatus: transferStatus,
   uploadStatus: transferStatus,
