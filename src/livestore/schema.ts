@@ -44,12 +44,12 @@ export const tables = {
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
     schema: Schema.Struct({
-      sortFilesBy: Schema.Literal('createdAt', 'updatedAt', 'id')
+      online: Schema.Boolean,
     }),
     default: {
       id: SessionIdSymbol,
       value: {
-        sortFilesBy: 'updatedAt',
+        online: true,
       }
     }
   }),

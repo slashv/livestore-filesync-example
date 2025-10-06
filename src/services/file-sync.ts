@@ -15,9 +15,7 @@ export const fileSync = () => {
   const { downloadFile, uploadFile, checkHealth } = remoteFileStorage()
 
   let unwatch: (() => void) | null = null
-  let online = typeof navigator !== 'undefined' ? navigator.onLine : true
   let connectivityEventsAttached = false
-  let _connectivityIntervalId: number | null = null
 
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
@@ -131,7 +129,10 @@ export const fileSync = () => {
 
   const executor = createSyncExecutor({
     maxConcurrentPerKind: { download: 2, upload: 2 },
-    isOnline: () => online,
+    isOnline: () => {
+      const { online } = store.query(queryDb(tables.uiState.get()))
+      return online
+    },
     run: async (kind, fileId) => {
       if (kind === 'download') {
         _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
@@ -153,19 +154,26 @@ export const fileSync = () => {
   const attachConnectivityHandlers = () => {
     if (connectivityEventsAttached) return
     connectivityEventsAttached = true
-    window.addEventListener('online', () => { online = true; executor.resume() })
-    window.addEventListener('offline', () => { online = false; executor.pause() })
+    const setOnline = (value: boolean) => {
+      const { online } = store.query(queryDb(tables.uiState.get()))
+      if (online !== value) {
+        store.commit(events.uiStateSet({ online: value }))
+      }
+      if (value) { executor.resume() } else { executor.pause() }
+    }
+
+    // initialize from navigator
+    setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+    window.addEventListener('online', () => setOnline(true))
+    window.addEventListener('offline', () => setOnline(false))
     const connectivityTickerMs = 10000
-    _connectivityIntervalId = window.setInterval(async () => {
+    window.setInterval(async () => {
       try {
         const ok = await checkHealth()
-        if (ok) {
-          if (!online) { online = true; executor.resume() }
-        } else {
-          if (online) { online = false; executor.pause() }
-        }
+        setOnline(!!ok)
       } catch {
-        if (online) { online = false; executor.pause() }
+        setOnline(false)
       }
     }, connectivityTickerMs)
   }
