@@ -36,11 +36,10 @@ async function deleteImage(image: Image) {
       @change="addImage($event)"
       accept="image/*"
     />
-    <div class="flex gap-4">
-      <div v-for="image in images" :key="image.id" class="w-[400px]">
-        <button @click="deleteImage(image)">Delete</button>
+    <div class="flex flex-col gap-4">
+      <div v-for="image in images" :key="image.id">
         <Suspense>
-          <ImageDisplay :image="image" />
+          <ImageDisplay :image="image" @deleteImage="deleteImage(image)" />
           <template #fallback>Loading img..</template>
         </Suspense>
       </div>
