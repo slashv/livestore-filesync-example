@@ -10,7 +10,7 @@ import ImageDisplay from './image-display.vue'
 const { store } = useStore()
 const { saveFile, deleteFile } = fileStorage()
 
-const images = store.useQuery(queryDb(tables.images.where({ deletedAt: null }).orderBy('id', 'asc')))
+const images = store.useQuery(queryDb(tables.images.where({ deletedAt: null }).orderBy('createdAt', 'desc')))
 
 const dragDepth = ref(0)
 const showDropOverlay = ref(false)
