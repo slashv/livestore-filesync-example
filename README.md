@@ -87,7 +87,7 @@ const addImage = () => {
 </script>
 <template>
   <div v-for="image in images" :key="image.id">
-    <image-display :img="image" />
+    <image-display :image="image" />
   </div>
 </template>
 ```
