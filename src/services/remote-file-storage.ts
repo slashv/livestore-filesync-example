@@ -1,5 +1,20 @@
 export const remoteFileStorage = () => {
 
+  const getAuthHeaders = (): HeadersInit => {
+    const token = import.meta.env.VITE_WORKER_AUTH_TOKEN
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  const checkHealth = async (): Promise<boolean> => {
+    const baseUrl = import.meta.env.VITE_WORKER_API_URL || 'http://localhost:8787/api'
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: getAuthHeaders()
+    })
+    return response.ok
+  }
+
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -8,7 +23,8 @@ export const remoteFileStorage = () => {
     const uploadUrl = `${baseUrl}/upload`
     const response = await fetch(uploadUrl, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: getAuthHeaders()
     })
     // console.log('upload response', response)
 
@@ -21,7 +37,7 @@ export const remoteFileStorage = () => {
   }
 
   const downloadFile = async (url: string): Promise<File> => {
-      const response = await fetch(url)
+      const response = await fetch(url, { headers: getAuthHeaders() })
       // console.log('downloaded file response', response)
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`)
@@ -36,7 +52,8 @@ export const remoteFileStorage = () => {
 
   const deleteFile = async (url: string): Promise<void> => {
     const response = await fetch(url, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     })
 
     if (!response.ok) {
@@ -47,6 +64,7 @@ export const remoteFileStorage = () => {
   return {
     uploadFile,
     downloadFile,
-    deleteFile
+    deleteFile,
+    checkHealth
   }
 }

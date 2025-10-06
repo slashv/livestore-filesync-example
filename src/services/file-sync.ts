@@ -12,7 +12,7 @@ import { createSyncExecutor } from '../services/sync-executor'
 export const fileSync = () => {
   const { store } = useStore()
   const { writeFile, readFile, deleteFile } = localFileStorage()
-  const { downloadFile, uploadFile } = remoteFileStorage()
+  const { downloadFile, uploadFile, checkHealth } = remoteFileStorage()
 
   let unwatch: (() => void) | null = null
   let online = typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -157,20 +157,15 @@ export const fileSync = () => {
     window.addEventListener('offline', () => { online = false; executor.pause() })
     const connectivityTickerMs = 10000
     _connectivityIntervalId = window.setInterval(async () => {
-      const controller = new AbortController()
-      const timeoutId = window.setTimeout(() => controller.abort(), 3000)
       try {
-        const baseUrl = import.meta.env.VITE_WORKER_API_URL || 'http://localhost:8787/api'
-        const res = await fetch(`${baseUrl}/health`, { method: 'GET', cache: 'no-store', signal: controller.signal })
-        if (res.ok) {
+        const ok = await checkHealth()
+        if (ok) {
           if (!online) { online = true; executor.resume() }
         } else {
           if (online) { online = false; executor.pause() }
         }
       } catch {
         if (online) { online = false; executor.pause() }
-      } finally {
-        window.clearTimeout(timeoutId)
       }
     }, connectivityTickerMs)
   }

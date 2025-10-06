@@ -18,7 +18,7 @@ const storeOptions = {
   schema,
   adapter,
   storeId: 'vue-livestore-filesync-13',
-  syncPayload: { authToken: import.meta.env.VITE_LIVESTORE_AUTH_TOKEN }
+  syncPayload: { authToken: import.meta.env.VITE_WORKER_AUTH_TOKEN }
 }
 </script>
 

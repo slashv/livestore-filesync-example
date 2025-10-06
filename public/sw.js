@@ -15,6 +15,15 @@ self.__FILES_BASE_URL__ = (() => {
   }
 })()
 
+self.__WORKER_AUTH_TOKEN__ = (() => {
+  try {
+    const params = new URLSearchParams(self.location.search)
+    return params.get('token') || ''
+  } catch {
+    return ''
+  }
+})()
+
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url)
   if (url.origin === self.location.origin && url.pathname.startsWith('/files/')) {
@@ -39,7 +48,9 @@ async function handleFileRequest(request, opfsPath) {
     const remotePath = opfsPath.replace(/^files\//, '')
     const remoteUrl = `${self.__FILES_BASE_URL__}/${remotePath}`
     console.log("returning file from remote storage", remoteUrl)
-    return fetch(remoteUrl, { credentials: 'omit' })
+    const headers = {}
+    if (self.__WORKER_AUTH_TOKEN__) headers['Authorization'] = `Bearer ${self.__WORKER_AUTH_TOKEN__}`
+    return fetch(remoteUrl, { credentials: 'omit', headers })
   }
 }
 

@@ -13,6 +13,7 @@ interface Env {
   FILE_BUCKET: R2Bucket
   WEBSOCKET_SERVER: DurableObjectNamespace
   DB: D1Database
+  WORKER_AUTH_TOKEN: string
   ADMIN_SECRET: string
 }
 
@@ -30,6 +31,24 @@ export default {
           'Access-Control-Max-Age': '86400'
         }
       })
+    }
+
+    // Require auth for all /api routes (including health)
+    if (url.pathname.startsWith('/api/')) {
+      const authHeader = request.headers.get('Authorization')
+      const xSecret = request.headers.get('X-Worker-Auth')
+      const token = authHeader?.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : xSecret
+      if (!token || token !== env.WORKER_AUTH_TOKEN) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'WWW-Authenticate': 'Bearer'
+          }
+        })
+      }
     }
 
     // Handle health check
@@ -123,7 +142,7 @@ export default {
     // Delegate to LiveStore worker for all other requests
     const livestoreWorker = makeWorker({
       validatePayload: (payload: any) => {
-        if (payload?.authToken !== env.ADMIN_SECRET) {
+        if (payload?.authToken !== env.WORKER_AUTH_TOKEN) {
           throw new Error(`Invalid auth token: ${payload?.authToken}`)
         }
       },
