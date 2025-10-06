@@ -16,6 +16,31 @@ export const fileSync = () => {
 
   let unwatch: (() => void) | null = null
   let connectivityEventsAttached = false
+  let healthCheckIntervalId: number | null = null
+  let setOnline: (value: boolean) => void
+
+  const stopHealthChecks = () => {
+    if (healthCheckIntervalId !== null) {
+      window.clearInterval(healthCheckIntervalId)
+      healthCheckIntervalId = null
+    }
+  }
+
+  const startHealthChecks = () => {
+    if (healthCheckIntervalId !== null) return
+    const connectivityTickerMs = 10000
+    healthCheckIntervalId = window.setInterval(async () => {
+      try {
+        const ok = await checkHealth()
+        if (ok) {
+          setOnline(true)
+          stopHealthChecks()
+        }
+      } catch {
+        // remain offline and keep checking
+      }
+    }, connectivityTickerMs)
+  }
 
   const updateLocalFileState = () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
@@ -111,6 +136,11 @@ export const fileSync = () => {
         store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, lastSyncError: String(error?.message ?? error) } } }))
         setStatus('pending')
       }
+      // trigger connectivity verification when a transfer fails
+      if (typeof setOnline === 'function') {
+        setOnline(false)
+      }
+      startHealthChecks()
       throw error
     }
   }
@@ -151,31 +181,28 @@ export const fileSync = () => {
     }
   })
 
+  setOnline = (value: boolean) => {
+    const { online } = store.query(queryDb(tables.uiState.get()))
+    if (online !== value) {
+      store.commit(events.uiStateSet({ online: value }))
+    }
+    if (value) {
+      executor.resume()
+    } else {
+      executor.pause()
+    }
+  }
+
   const attachConnectivityHandlers = () => {
     if (connectivityEventsAttached) return
     connectivityEventsAttached = true
-    const setOnline = (value: boolean) => {
-      const { online } = store.query(queryDb(tables.uiState.get()))
-      if (online !== value) {
-        store.commit(events.uiStateSet({ online: value }))
-      }
-      if (value) { executor.resume() } else { executor.pause() }
-    }
-
     // initialize from navigator
-    setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
+    const initialOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+    setOnline(initialOnline)
+    if (!initialOnline) startHealthChecks()
 
-    window.addEventListener('online', () => setOnline(true))
-    window.addEventListener('offline', () => setOnline(false))
-    const connectivityTickerMs = 10000
-    window.setInterval(async () => {
-      try {
-        const ok = await checkHealth()
-        setOnline(!!ok)
-      } catch {
-        setOnline(false)
-      }
-    }, connectivityTickerMs)
+    window.addEventListener('online', () => { setOnline(true); stopHealthChecks() })
+    window.addEventListener('offline', () => { setOnline(false); startHealthChecks() })
   }
 
   const syncFiles = async () => {
