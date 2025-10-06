@@ -6,8 +6,6 @@ import type { Image } from '../types'
 import { fileStorage } from '../services/file-storage'
 import ImageDisplay from './image-display.vue'
 
-type ImageInst = Image
-
 const { store } = useStore()
 const { saveFile, deleteFile } = fileStorage()
 
@@ -23,7 +21,7 @@ async function addImage(e: any) {
   }))
 }
 
-async function deleteImage(image: ImageInst) {
+async function deleteImage(image: Image) {
   await deleteFile(image.fileId)
   store.commit(events.imageDeleted({ id: image.id, deletedAt: new Date() }))
 }

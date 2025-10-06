@@ -4,10 +4,8 @@ import { tables } from '../livestore/schema'
 import { useStore } from 'vue-livestore'
 import type { Image } from '../types'
 
-type ImageInst = Image
-
 const props = defineProps<{
-  image: ImageInst
+  image: Image
 }>()
 
 const { store } = useStore()
