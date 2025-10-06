@@ -4,9 +4,9 @@ This is an example repository on how file syncing can work with LiveStore for lo
 
 Files are first saved in OPFS and automatically synced across clients in the background through remote storage.
 
-State is split between a synced `files` table and a `localFilesState` `clientDocument` which is only shared between clients with access to the same local storage.
+[State](src/livestore/schema.ts) is split between a synced `files` table and a `localFilesState` `clientDocument` which is only shared between clients with access to the same local storage.
 
-The [fileStorage](src/services/file-storage.ts) service exposes `saveFile` and `deleteFile` methods which handles the underlying file operations through the [localFileStorage](src/services/local-file-storage.ts) and [remoteFileStorage](src/services/remote-file-storage.ts) services while also updating LiveStore state.
+[fileStorage](src/services/file-storage.ts) service exposes `saveFile` and `deleteFile` methods which handles the underlying file operations through the [localFileStorage](src/services/local-file-storage.ts) and [remoteFileStorage](src/services/remote-file-storage.ts) services while also updating LiveStore state.
 
 [Sync service](src/services/file-sync.ts) detects changes to files, updates `localFileStorage` and queues transfers through a [sync execturor](src/services/sync-executor.ts). It handles network failure and automatically resumes syncing when reconnected.
 
@@ -75,7 +75,7 @@ const images = store.useQuery(
   queryDb(tables.images.where({ deletedAt: null }))
 )
 
-const addImage = () => {
+const addImage = async (file: File) => {
   const fileId = await saveFile(file)
   store.commit(
     events.imageCreated({
@@ -86,6 +86,9 @@ const addImage = () => {
 }
 </script>
 <template>
+  <button @click="(event) => addImage(event.target.files[0])">
+    Add Image
+  </button>
   <div v-for="image in images" :key="image.id">
     <image-display :image="image" />
   </div>

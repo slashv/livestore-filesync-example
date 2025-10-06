@@ -47,6 +47,11 @@ export const fileStorage = () => {
   const deleteFile = async (fileId: string) => {
     const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
 
+    if (!file) {
+      console.error('File not found', fileId)
+      return
+    }
+
     // Delete file from DB
     store.commit(events.fileDeleted({ id: fileId, deletedAt: new Date() }))
 
