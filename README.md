@@ -56,8 +56,8 @@ The FileSyncProvider is responsible for starting the sync process. It need to be
 ```vue
 // components/file-sync-provider.vue
 <script setup lang="ts">
-const { runFileSync } = fileSync();
-runFileSync();
+const { runFileSync } = fileSync()
+runFileSync()
 </script>
 
 <template>
@@ -70,20 +70,20 @@ The `saveFile` method from `file-storage.ts` takes care of saving the file to OP
 ```vue
 // components/images.vue
 <script setup lang="ts">
-const { store } = useStore();
+const { store } = useStore()
 const images = store.useQuery(
   queryDb(tables.images.where({ deletedAt: null }))
-);
+)
 
 const addImage = () => {
-  const fileId = await saveFile(file);
+  const fileId = await saveFile(file)
   store.commit(
     events.imageCreated({
       id: crypto.randomUUID(),
       fileId: fileId,
     })
-  );
-};
+  )
+}
 </script>
 <template>
   <div v-for="image in images" :key="image.id">
@@ -98,13 +98,13 @@ We can display an image by just passing the `file.path`. The service worker take
 // components/image-display.vue
 <script setup lang="ts">
 const props = defineProps<{
-  image: Image;
-}>();
+  image: Image
+}>()
 
-const { store } = useStore();
+const { store } = useStore()
 const file = store.useQuery(
   queryDb(tables.files.where({ id: props.image.fileId }).first())
-);
+)
 </script>
 
 <template>
