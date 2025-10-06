@@ -26,21 +26,6 @@ export const fileStorage = () => {
       updatedAt: new Date(),
     }))
 
-    // Update local state with new file
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    store.commit(events.localFileStateSet({
-      localFiles: {
-        ...localFiles,
-        [fileId]: {
-          path: path,
-          localHash: fileHash,
-          downloadStatus: 'done',
-          uploadStatus: 'pending',
-          lastSyncError: '',
-        }
-      }
-    }))
-
     return fileId
   }
 

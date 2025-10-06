@@ -11,13 +11,14 @@ import { createSyncExecutor } from '../services/sync-executor'
 
 export const fileSync = () => {
   const { store } = useStore()
-  const { writeFile, readFile, deleteFile } = localFileStorage()
+  const { writeFile, readFile, deleteFile, fileExists } = localFileStorage()
   const { downloadFile, uploadFile, checkHealth } = remoteFileStorage()
 
   let unwatch: (() => void) | null = null
   let connectivityEventsAttached = false
   let healthCheckIntervalId: number | null = null
   let setOnline: (value: boolean) => void
+  const inFlightLocalDetection = new Set<string>()
 
   const stopHealthChecks = () => {
     if (healthCheckIntervalId !== null) {
@@ -42,11 +43,13 @@ export const fileSync = () => {
     }, connectivityTickerMs)
   }
 
-  const updateLocalFileState = () => {
+  const updateLocalFileState = async () => {
     const files = store.query(queryDb(tables.files.where({ deletedAt: null })))
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
 
     const nextLocalFilesState: LocalFilesState = { ...localFiles }
+
+    // Ensure remote-only files get a pending download entry
     files.forEach((file) => {
       if (file.id in nextLocalFilesState) {
         const localFile = nextLocalFilesState[file.id]!
@@ -57,7 +60,7 @@ export const fileSync = () => {
           uploadStatus: localFile.uploadStatus ?? 'done',
           lastSyncError: localFile.lastSyncError ?? ''
         }
-      } else if (file.remoteUrl) {
+      } else if (file.remoteUrl && !file.localPath) {
         nextLocalFilesState[file.id] = {
           path: '',
           localHash: '',
@@ -68,13 +71,43 @@ export const fileSync = () => {
       }
     })
 
-    Object.keys(nextLocalFilesState).forEach((fileId) => {
-      if (!files.find((f) => f.id === fileId)) {
-        delete nextLocalFilesState[fileId]
+    // Detect local presence for files missing in local state
+    const additions: Record<string, LocalFile> = {}
+
+    await Promise.all(files.map(async (file) => {
+      if (file.id in nextLocalFilesState) return
+      if (!file.localPath) return
+      if (inFlightLocalDetection.has(file.id)) return
+
+      inFlightLocalDetection.add(file.id)
+      try {
+        const exists = await fileExists(file.localPath)
+        if (!exists) return
+        const f = await readFile(file.localPath)
+        const localHash = await hashFile(f)
+        const needsUpload = !file.remoteUrl || file.contentHash !== localHash
+
+        additions[file.id] = {
+          path: file.localPath,
+          localHash,
+          downloadStatus: 'done',
+          uploadStatus: needsUpload ? 'pending' : 'done',
+          lastSyncError: ''
+        }
+      } finally {
+        inFlightLocalDetection.delete(file.id)
       }
+    }))
+
+    const merged: LocalFilesState = { ...nextLocalFilesState, ...additions }
+
+    // Prune any local state entries for files no longer present
+    const fileIds = new Set(files.map((f) => f.id))
+    Object.keys(merged).forEach((fileId) => {
+      if (!fileIds.has(fileId)) delete merged[fileId]
     })
 
-    store.commit(events.localFileStateSet({ localFiles: nextLocalFilesState }))
+    store.commit(events.localFileStateSet({ localFiles: merged }))
   }
 
   const _setLocalFileTransferStatus = (fileId: string, action: 'upload' | 'download', status: TransferStatus) => {
@@ -225,10 +258,10 @@ export const fileSync = () => {
     if (unwatch) return
     attachConnectivityHandlers()
     const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
-    const watchTrigger = computed(() => files.value.map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.deletedAt ?? ''}`).join(','))
-    unwatch = watch(() => watchTrigger.value, () => {
-      updateLocalFileState()
-      syncFiles()
+    const watchTrigger = computed(() => files.value.map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.localPath ?? ''}:${file.deletedAt ?? ''}`).join(','))
+    unwatch = watch(() => watchTrigger.value, async () => {
+      await updateLocalFileState()
+      await syncFiles()
     }, { immediate: true })
   }
 
