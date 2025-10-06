@@ -25,6 +25,8 @@ export const tables = {
       id: State.SQLite.text({ primaryKey: true }),
       title: State.SQLite.text({ default: '' }),
       fileId: State.SQLite.text({ default: '' }),
+      createdAt: State.SQLite.integer({ schema: Schema.DateFromNumber }),
+      updatedAt: State.SQLite.integer({ schema: Schema.DateFromNumber }),
       deletedAt: State.SQLite.integer({ nullable: true, schema: Schema.DateFromNumber }),
     }
   }),
@@ -71,11 +73,11 @@ export const tables = {
 export const events = {
   imageCreated: Events.synced({
     name: 'v1.ImageCreated',
-    schema: Schema.Struct({ id: Schema.String, title: Schema.String, fileId: Schema.String }),
+    schema: Schema.Struct({ id: Schema.String, title: Schema.String, fileId: Schema.String, createdAt: Schema.Date, updatedAt: Schema.Date }),
   }),
   imageUpdated: Events.synced({
     name: 'v1.ImageUpdated',
-    schema: Schema.Struct({ id: Schema.String, title: Schema.String }),
+    schema: Schema.Struct({ id: Schema.String, title: Schema.String, updatedAt: Schema.Date }),
   }),
   imageDeleted: Events.synced({
     name: 'v1.ImageDeleted',
@@ -111,8 +113,8 @@ export const events = {
 
 // Materializers are used to map events to state
 const materializers = State.SQLite.materializers(events, {
-  'v1.ImageCreated': ({ id, title, fileId }) => tables.images.insert({ id, title, fileId }),
-  'v1.ImageUpdated': ({ id, title }) => tables.images.update({ title }).where({ id }),
+  'v1.ImageCreated': ({ id, title, fileId, createdAt, updatedAt }) => tables.images.insert({ id, title, fileId, createdAt, updatedAt }),
+  'v1.ImageUpdated': ({ id, title, updatedAt }) => tables.images.update({ title, updatedAt }).where({ id }),
   'v1.ImageDeleted': ({ id, deletedAt }) => tables.images.update({ deletedAt }).where({ id }),
   'v1.FileCreated': ({ id, localPath, contentHash, createdAt, updatedAt }) =>
     tables.files.insert({ id, localPath, contentHash, createdAt, updatedAt }),
