@@ -29,7 +29,9 @@ pnpm dev
 
 ## Example
 
-This is simplified example, for more complete code see files in [src](/src). See [schema.ts](src/livestore/schema.ts) for how the database schema and clientDocumens are structured.
+This is simplified example with imports omitted, for complete example see files in [src](/src).
+
+[schema.ts](src/livestore/schema.ts) is relevant context to understand how the data structures are set up.
 
 Some LiveStore code is omitted. For more information about using Vue and LiveStore see [the getting started guide](https://docs.livestore.dev/getting-started/vue/)
 
