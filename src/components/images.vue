@@ -92,14 +92,18 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    Images
     <input
       type="file"
       ref="fileInput"
       @change="handleFileInputChange"
       accept="image/*"
       multiple
+      class="hidden"
+      id="fileInput"
     />
+    <button @click="$refs.fileInput?.click()" class="btn">
+      Add Images
+    </button>
     <div class="flex flex-col gap-4">
       <div v-for="image in images" :key="image.id">
         <ImageDisplay :image="image" @deleteImage="deleteImage(image)" />

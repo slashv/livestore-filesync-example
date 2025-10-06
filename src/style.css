@@ -15,10 +15,10 @@
 }
 
 .btn {
-  @apply border-border border-[1px] px-2 py-1 text-sm text-foreground bg-background;
+  @apply border-border border-[1px] px-2 py-1 text-sm text-foreground;
   cursor: pointer;
   &:hover {
-    @apply opacity-80;
+    @apply text-background bg-foreground;
   }
   &:active {
     @apply opacity-60;
