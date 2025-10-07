@@ -14,6 +14,14 @@ Files are first saved to OPFS and automatically synced across clients in the bac
 
 [Web worker](src/workers/cloudflare-sync.ts) included which handles remote file storage api requests alongside LiveStore syncing.
 
+## Comments & areas of improvement
+
+There is a simpler way to approach this by delegating file caching to a service worker completely. This solves the problem of persistent access to remote files when going offline but would still require logic to enqueue uploads and storing files locally temporarily when adding them in an offline state.
+
+The sync trigger currently watches changes to a custom string composed of some key values from files. It might make sense to change this to trigger on specific LiveStore events like FileCreated, FileUpdated and FileDeleted and potentially differentiate the logic depending on which event. I haven't yet explored the best way to tap into LiveStore eventStream but might look into this in the future.
+
+This feature is very suitable for using `Effect ts` due to it's excellent primitives for concurrency, requirements management and potentially adopting `platform FileSystem` to make it more runtime agnostic. I'm still new to Effect so I wanted to first approach this problem space from a more familiar perspective. Another reason for first implementing without Effect is that I though it would be a good exercise later to evaluate the benefits of Effect and ways to make the functionality more "production ready".
+
 ## Dev setup
 
 ```bash
