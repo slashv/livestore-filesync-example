@@ -37,11 +37,11 @@ pnpm dev
 
 ## Example
 
-This is simplified example with imports omitted, for complete example see files in [src](/src).
+This is simplified example to showcase basic functionality, for complete code see files in [src](/src).
 
 [schema.ts](src/livestore/schema.ts) is relevant context to understand how the data structures are set up.
 
-Some LiveStore code is omitted. For more information about using Vue and LiveStore see [the getting started guide](https://docs.livestore.dev/getting-started/vue/)
+For more information about using Vue and LiveStore see [the getting started guide](https://docs.livestore.dev/getting-started/vue/)
 
 We first wrap our app in a FileSyncProvider.
 
@@ -73,7 +73,7 @@ runFileSync()
 </template>
 ```
 
-In the full code we have a `saveFile` helper method in the [file storage](src/services/file-storage.ts) service but here I've extracted the essential part to highlight that we only need to save to local storage and commit the FileCreated event and then the [sync service](src/services/file-sync.ts) takes care of the rest.
+In the full code we have a `saveFile` helper method in the [file storage](src/services/file-storage.ts) service but here I've extracted the essential part to highlight that we only need to save to file local storage and commit the FileCreated event and then the [sync service](src/services/file-sync.ts) takes care of the rest.
 
 ```vue
 // components/images.vue
@@ -93,6 +93,10 @@ const addImage = async (event) => {
       contentHash: fileHash,
       createdAt: new Date(),
       updatedAt: new Date(),
+  }))
+  store.commit(events.imageCreated({
+      id: crypto.randomUUID(),
+      fileId: fileId
   }))
 }
 </script>
