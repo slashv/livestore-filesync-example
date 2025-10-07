@@ -87,7 +87,7 @@ export const fileSync = () => {
       }
     })
 
-    // Pass 2: detect on-disk presence for files missing in state (does disk I/O) and initialize state
+    // Pass 2: detect on-disk presence for files missing in state (does disk I/O)
     const additions: Record<string, LocalFile> = {}
 
     await Promise.all(files.map(async (file) => {
@@ -201,8 +201,6 @@ export const fileSync = () => {
       }
     }
   }
-
-  // retained per-file deletion helper if needed in the future
 
   const executor = createSyncExecutor({
     maxConcurrentPerKind: { download: 2, upload: 2 },
