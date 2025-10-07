@@ -13,11 +13,7 @@ export const fileStorage = () => {
   const saveFile = async (file: File): Promise<string> => {
     const { id: fileId, path } = makeStoredFilePath(file.name)
     const fileHash = await hashFile(file)
-
-    // Write file to local storage
     await writeFile(path, file)
-
-    // Create file instance in DB
     store.commit(events.fileCreated({
       id: fileId,
       localPath: path,
@@ -25,37 +21,14 @@ export const fileStorage = () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     }))
-
     return fileId
   }
 
   const deleteFile = async (fileId: string) => {
     const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-
-    if (!file) {
-      console.error('File not found', fileId)
-      return
-    }
-
-    // Delete file from DB
     store.commit(events.fileDeleted({ id: fileId, deletedAt: new Date() }))
-
-    // Remove file from local state
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    store.commit(events.localFileStateSet({
-      localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
-    }))
-
-    // Delete file from local and remote storage
-    try {
-      await deleteLocalFile(file.localPath)
-    } catch(e) {
-      console.error('Error deleting local file', e)
-    }
-    try {
-      await deleteRemoteFile(file.remoteUrl)
-    } catch(e) {
-      console.error('Error deleting remote file', e)
+    try { await deleteLocalFile(file.localPath) } catch(e) { console.error('Error deleting local file', e) }
+    try { await deleteRemoteFile(file.remoteUrl) } catch(e) { console.error('Error deleting remote file', e)
     }
   }
 

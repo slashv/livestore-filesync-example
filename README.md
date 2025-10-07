@@ -6,7 +6,7 @@ Files are first saved in OPFS and automatically synced across clients in the bac
 
 [State](src/livestore/schema.ts) is split between a synced `files` table and a `localFilesState` `clientDocument` which is only shared between clients with access to the same local storage.
 
-[File storage](src/services/file-storage.ts) service exposes `saveFile` and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services and updating LiveStore state.
+[File storage](src/services/file-storage.ts) service exposes `saveFile` and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services.
 
 [Sync service](src/services/file-sync.ts) detects changes to files, updates `localFileStorage` and queues transfers through a [sync execturor](src/services/sync-executor.ts). It handles network failure and automatically resumes syncing when reconnected.
 
@@ -65,7 +65,7 @@ runFileSync()
 </template>
 ```
 
-The `saveFile` method from `file-storage.ts` takes care of saving the file to OPFS, creating a File instance in the synced LiveStore DB and a record in the `localFileState` clientDocument which is what the `file-sync.ts` service uses to track sync operations.
+The `saveFile` is a
 
 ```vue
 // components/images.vue
@@ -76,13 +76,15 @@ const images = store.useQuery(
 )
 
 const addImage = async (file: File) => {
-  const fileId = await saveFile(file)
-  store.commit(
-    events.imageCreated({
-      id: crypto.randomUUID(),
-      fileId: fileId,
-    })
-  )
+ .const { id: fileId, path } = makeStoredFilePath(file.name)
+  await writeFile(path, file)  // Write file to OPFS
+  store.commit(events.fileCreated({
+      id: fileId,
+      localPath: path,
+      contentHash: fileHash,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+  }))
 }
 </script>
 <template>
@@ -95,7 +97,7 @@ const addImage = async (file: File) => {
 </template>
 ```
 
-We can display an image by just passing the `file.path`. The service worker takes care or routing the request to local or remote storage.
+We can display an image by just passing the `file.path`. The service worker takes care of routing the request to local or remote storage.
 
 ```vue
 // components/image-display.vue
