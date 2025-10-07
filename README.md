@@ -83,8 +83,10 @@ const images = store.useQuery(
   queryDb(tables.images.where({ deletedAt: null }))
 )
 
-const addImage = async (file: File) => {
- .const { id: fileId, path } = makeStoredFilePath(file.name)
+// In the main code we have a saveFile helper method but this is basically all you need
+const addImage = async (event) => {
+  const file = Array.from(event.target.files)[0]
+  const { id: fileId, path } = makeStoredFilePath(file.name)
   await writeFile(path, file)  // Write file to OPFS
   store.commit(events.fileCreated({
       id: fileId,
@@ -95,10 +97,9 @@ const addImage = async (file: File) => {
   }))
 }
 </script>
+
 <template>
-  <button @click="(event) => addImage(event.target.files[0])">
-    Add Image
-  </button>
+  <input type="file" ref="fileInput" @change="addImage" accept="image/*" multiple class="hidden" id="fileInput" />
   <div v-for="image in images" :key="image.id">
     <image-display :image="image" />
   </div>
@@ -110,14 +111,10 @@ We can display an image by just passing the `file.path`. The service worker take
 ```vue
 // components/image-display.vue
 <script setup lang="ts">
-const props = defineProps<{
-  image: Image
-}>()
+const props = defineProps<{ image: Image }>()
 
 const { store } = useStore()
-const file = store.useQuery(
-  queryDb(tables.files.where({ id: props.image.fileId }).first())
-)
+const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId }).first()))
 </script>
 
 <template>
