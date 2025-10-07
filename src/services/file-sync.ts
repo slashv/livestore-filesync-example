@@ -56,18 +56,19 @@ export const fileSync = () => {
 
     const nextLocalFilesState: LocalFilesState = { ...localFiles }
 
+    // Pass 1: reconcile state using existing local state and remote metadata only (no disk I/O)
     files.forEach((file) => {
       if (file.id in nextLocalFilesState) {
+        // Known locally: cheap compare of stored localHash vs remote contentHash to decide download status
         const localFile = nextLocalFilesState[file.id]!
         const remoteMismatch = localFile.localHash !== file.contentHash
         nextLocalFilesState[file.id] = {
-          path: localFile.path,
-          localHash: localFile.localHash,
+          ...localFile,
           downloadStatus: remoteMismatch ? 'pending' : 'done',
           uploadStatus: 'done',
-          lastSyncError: localFile.lastSyncError,
         }
       } else if (file.remoteUrl) {
+        // Not known locally but exists remotely: mark as pending download
         nextLocalFilesState[file.id] = {
           path: '',
           localHash: '',
@@ -79,7 +80,7 @@ export const fileSync = () => {
       console.log('local file state for file', file.id, nextLocalFilesState[file.id])
     })
 
-    // Detect local presence for files missing in local state
+    // Pass 2: detect on-disk presence for files missing in state (does disk I/O) and initialize state
     const additions: Record<string, LocalFile> = {}
 
     await Promise.all(files.map(async (file) => {
