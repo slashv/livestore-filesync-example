@@ -5,10 +5,15 @@ import { useStore } from 'vue-livestore'
 import { tables, events } from '../livestore/schema'
 import type { Image } from '../types'
 import { fileStorage } from '../services/file-storage'
+import { fileSync } from '../services/file-sync'
+import { localFileStorage } from '../services/local-file-storage'
+import { invertImageFile } from '../utils/image.utils'
 import ImageDisplay from './image-display.vue'
 
 const { store } = useStore()
 const { saveFile, deleteFile } = fileStorage()
+const { markLocalFileChanged } = fileSync()
+const { readFile, writeFile } = localFileStorage()
 
 const images = store.useQuery(queryDb(tables.images.where({ deletedAt: null }).orderBy('createdAt', 'desc')))
 
@@ -31,6 +36,15 @@ async function addImagesFromFiles(files: File[]) {
       updatedAt: new Date()
     }))
   }
+}
+
+async function editImage(image: Image) {
+  const file = store.query(queryDb(tables.files.where({ id: image.fileId }).first()))
+  if (!file?.localPath) return
+  const srcFile = await readFile(file.localPath)
+  const edited = await invertImageFile(srcFile)
+  await writeFile(file.localPath, edited)
+  await markLocalFileChanged(image.fileId)
 }
 
 function handleFileInputChange(e: Event) {
@@ -106,7 +120,7 @@ onUnmounted(() => {
     </button>
     <div class="flex flex-col gap-4">
       <div v-for="image in images" :key="image.id">
-        <ImageDisplay :image="image" @deleteImage="deleteImage(image)" />
+        <ImageDisplay :image="image" @deleteImage="deleteImage(image)" @editImage="editImage(image)" />
       </div>
     </div>
     <div v-if="showDropOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pointer-events-none select-none">

@@ -11,6 +11,7 @@ const props = defineProps<{
 
 const emits = defineEmits<{
   (e: 'deleteImage'): void
+  (e: 'editImage'): void
 }>()
 
 const { store } = useStore()
@@ -29,7 +30,10 @@ const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId 
     <div class="flex flex-col">
       <div class="p-2 border-b-[1px] border-border flex justify-between items-center">
         <div class="text-sm"><strong>Image ID:</strong> {{ props.image.id }} | <strong>File ID:</strong> {{ file.id }}</div>
-        <button class="btn" @click="emits('deleteImage')">Delete</button>
+        <div class="flex gap-2">
+          <button class="btn" @click="emits('editImage')">Edit</button>
+          <button class="btn" @click="emits('deleteImage')">Delete</button>
+        </div>
       </div>
 
       <div class="grid grid-cols-[120px_1fr] text-sm">

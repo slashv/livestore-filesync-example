@@ -4,7 +4,8 @@ export const localFileStorage = () => {
 
   const splitPath = (path: string): { dirs: string[]; file: string } => {
     const parts = path.split('/').filter(Boolean)
-    const file = parts.pop() ?? ''
+    const fileWithQuery = parts.pop() ?? ''
+    const file = fileWithQuery.split('?')[0]
     return { dirs: parts, file }
   }
 

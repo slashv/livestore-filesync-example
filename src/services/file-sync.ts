@@ -49,18 +49,18 @@ export const fileSync = () => {
 
     const nextLocalFilesState: LocalFilesState = { ...localFiles }
 
-    // Ensure remote-only files get a pending download entry
     files.forEach((file) => {
       if (file.id in nextLocalFilesState) {
         const localFile = nextLocalFilesState[file.id]!
+        const remoteMismatch = localFile.localHash !== file.contentHash
         nextLocalFilesState[file.id] = {
-          path: localFile.path ?? '',
-          localHash: localFile.localHash ?? '',
-          downloadStatus: localFile.downloadStatus ?? 'done',
-          uploadStatus: localFile.uploadStatus ?? 'done',
-          lastSyncError: localFile.lastSyncError ?? ''
+          path: localFile.path,
+          localHash: localFile.localHash,
+          downloadStatus: remoteMismatch ? 'pending' : 'done',
+          uploadStatus: 'done',
+          lastSyncError: localFile.lastSyncError,
         }
-      } else if (file.remoteUrl && !file.localPath) {
+      } else if (file.remoteUrl) {
         nextLocalFilesState[file.id] = {
           path: '',
           localHash: '',
@@ -69,6 +69,7 @@ export const fileSync = () => {
           lastSyncError: ''
         }
       }
+      console.log('local file state for file', file.id, nextLocalFilesState[file.id])
     })
 
     // Detect local presence for files missing in local state
@@ -85,13 +86,14 @@ export const fileSync = () => {
         if (!exists) return
         const f = await readFile(file.localPath)
         const localHash = await hashFile(f)
-        const needsUpload = !file.remoteUrl || file.contentHash !== localHash
+        const remoteMismatch = !!(file.remoteUrl && file.contentHash && file.contentHash !== localHash)
+        const shouldUpload = !file.remoteUrl
 
         additions[file.id] = {
-          path: file.localPath,
+          path: `${file.localPath}?v=${localHash}`,
           localHash,
-          downloadStatus: 'done',
-          uploadStatus: needsUpload ? 'pending' : 'done',
+          downloadStatus: remoteMismatch ? 'pending' : 'done',
+          uploadStatus: shouldUpload ? 'pending' : 'done',
           lastSyncError: ''
         }
       } finally {
@@ -111,6 +113,7 @@ export const fileSync = () => {
   }
 
   const _setLocalFileTransferStatus = (fileId: string, action: 'upload' | 'download', status: TransferStatus) => {
+    console.log('setLocalFiletransferStatus', action, status, fileId)
     const { localFiles } = store.query(queryDb(tables.localFileState.get()))
     const localFile = localFiles[fileId]
     if (!localFile) return
@@ -119,62 +122,68 @@ export const fileSync = () => {
   }
 
   const downloadRemoteFile = async (fileId: string): Promise<Record<string, LocalFile>> => {
-    const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    if (!fileInstance) {
-      throw new Error(`File: ${fileId} not found`)
-    }
-    const file = await downloadFile(fileInstance.remoteUrl)
-    console.log('downloaded remote file', file.name, file)
-    _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
-    const { path } = makeStoredPathForId(fileId, file.name)
-    await writeFile(path, file)
-    return {
-      [fileId]: {
-        path: path,
-        localHash: await hashFile(file),
-        downloadStatus: 'done',
-        uploadStatus: 'done',
-        lastSyncError: ''
+    try {
+      const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+      if (!fileInstance) {
+        throw new Error(`File: ${fileId} not found`)
+      }
+      const file = await downloadFile(fileInstance.remoteUrl)
+      console.log('downloaded remote file', file.name, file)
+      // _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
+      const { path } = makeStoredPathForId(fileId, file.name)
+      await writeFile(path, file)
+      const localHash = await hashFile(file)
+      return {
+        [fileId]: {
+          path: `${path}?v=${localHash}`,
+          localHash: localHash,
+          downloadStatus: 'done',
+          uploadStatus: 'done',
+          lastSyncError: ''
+        }
+      }
+    } catch (error) {
+      console.error('error downloading remote file', error)
+      return {
+        [fileId]: {
+          path: '',
+          localHash: '',
+          downloadStatus: 'pending',
+          uploadStatus: 'done',
+          lastSyncError: String(error)
+        }
       }
     }
   }
 
   const uploadLocalFile = async (fileId: string, localFile: LocalFile): Promise<Record<string, LocalFile>> => {
-    console.log('uploading local file', fileId)
-    const file = await readFile(localFile.path)
-    _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')
-    const remoteUrl = await uploadFile(file)
-    console.log('uploaded local file', file.name, remoteUrl)
-    store.commit(events.fileUpdated({
-      id: fileId,
-      remoteUrl: remoteUrl,
-      localPath: localFile.path,
-      contentHash: localFile.localHash,
-      updatedAt: new Date(),
-    }))
-    return { [fileId]: {
-        ...localFile,
-        uploadStatus: 'done',
-      }
-    }
-  }
-
-  const _withFailure = async <T>(fileId: string, run: () => Promise<T>, setStatus: (status: TransferStatus) => void) => {
     try {
-      return await run()
-    } catch (error: any) {
-      const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-      const localFile = localFiles[fileId]
-      if (localFile) {
-        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, [fileId]: { ...localFile, lastSyncError: String(error?.message ?? error) } } }))
-        setStatus('pending')
+      console.log('uploading local file', fileId)
+      const file = await readFile(localFile.path)
+      // _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')
+      const remoteUrl = await uploadFile(file)
+      console.log('uploaded local file', file.name, remoteUrl)
+      store.commit(events.fileUpdated({
+        id: fileId,
+        remoteUrl: remoteUrl,
+        localPath: localFile.path,
+        contentHash: localFile.localHash,
+        updatedAt: new Date(),
+      }))
+      return { [fileId]: {
+          ...localFile,
+          uploadStatus: 'done',
+        }
       }
-      // trigger connectivity verification when a transfer fails
-      if (typeof setOnline === 'function') {
-        setOnline(false)
+    } catch (error) {
+      console.error('error uploading local file', error)
+      return {
+        [fileId]: {
+          ...localFile,
+          uploadStatus: 'pending',
+          lastSyncError: String(error)
+        }
       }
-      startHealthChecks()
-      throw error
     }
   }
 
@@ -197,19 +206,18 @@ export const fileSync = () => {
       return online
     },
     run: async (kind, fileId) => {
+      console.log('running sync executor', kind, fileId)
+      const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+      const localFile = localFiles[fileId]
+      if (!localFile) return
       if (kind === 'download') {
         _setLocalFileTransferStatus(fileId, 'download', 'inProgress')
-        const partial = await _withFailure(fileId, () => downloadRemoteFile(fileId), (status) => _setLocalFileTransferStatus(fileId, 'download', status))
-        const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...partial } }))
+        const newLocalFile = await downloadRemoteFile(fileId)
+        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...newLocalFile } }))
       } else {
-        const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-        const localFile = localFiles[fileId]
-        if (!localFile) return
         _setLocalFileTransferStatus(fileId, 'upload', 'inProgress')
-        const partial = await _withFailure(fileId, () => uploadLocalFile(fileId, localFile), (status) => _setLocalFileTransferStatus(fileId, 'upload', status))
-        const { localFiles: currentLocalFiles } = store.query(queryDb(tables.localFileState.get()))
-        store.commit(events.localFileStateSet({ localFiles: { ...currentLocalFiles, ...partial } }))
+        const newLocalFile = await uploadLocalFile(fileId, localFile)
+        store.commit(events.localFileStateSet({ localFiles: { ...localFiles, ...newLocalFile } }))
       }
     }
   })
@@ -224,6 +232,27 @@ export const fileSync = () => {
     } else {
       executor.pause()
     }
+  }
+
+  const markLocalFileChanged = async (fileId: string) => {
+    const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+    if (!file?.localPath) return
+    const f = await readFile(file.localPath)
+    const localHash = await hashFile(f)
+    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+    store.commit(events.localFileStateSet({
+      localFiles: {
+        ...localFiles,
+        [fileId]: {
+          path: `${file.localPath}?v=${localHash}`,
+          localHash,
+          downloadStatus: 'done',
+          uploadStatus: 'queued',
+          lastSyncError: ''
+        }
+      }
+    }))
+    executor.enqueue('upload', fileId)
   }
 
   const attachConnectivityHandlers = () => {
@@ -258,7 +287,9 @@ export const fileSync = () => {
     if (unwatch) return
     attachConnectivityHandlers()
     const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
-    const watchTrigger = computed(() => files.value.map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.localPath ?? ''}:${file.deletedAt ?? ''}`).join(','))
+    const watchTrigger = computed(() => files.value
+      .map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.localPath ?? ''}:${file.contentHash ?? ''}:${file.deletedAt ?? ''}`)
+      .join(','))
     unwatch = watch(() => watchTrigger.value, async () => {
       await updateLocalFileState()
       await syncFiles()
@@ -266,6 +297,7 @@ export const fileSync = () => {
   }
 
   return {
-    runFileSync
+    runFileSync,
+    markLocalFileChanged
   }
 }
