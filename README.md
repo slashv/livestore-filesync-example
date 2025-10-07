@@ -24,8 +24,8 @@ This feature is suitable for using [Effect](https://effect.website/) due to it's
 
 ## Todo
 
-[ ] File transfer progress tracking
-[ ] Resumable transfers
+- [ ] File transfer progress tracking
+- [ ] Resumable transfers
 
 ## Dev setup
 
