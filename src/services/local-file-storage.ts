@@ -68,11 +68,29 @@ export const localFileStorage = () => {
     return URL.createObjectURL(file)
   }
 
+  const listFilesInDirectory = async (folder: string): Promise<string[]> => {
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await getDirectory(folder, { create: false })
+    } catch(e: any) {
+      if (e?.name === 'NotFoundError') return []
+      throw e
+    }
+    const paths: string[] = []
+    for await (const [name, handle] of (dir as any).entries() as AsyncIterable<[string, FileSystemHandle]>) {
+      if ((handle as any).kind === 'file') {
+        paths.push(`${folder}/${name}`)
+      }
+    }
+    return paths
+  }
+
   return {
     writeFile,
     readFile,
     getFileUrl,
     fileExists,
-    deleteFile
+    deleteFile,
+    listFilesInDirectory
   }
 }

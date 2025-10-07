@@ -11,7 +11,7 @@ import { createSyncExecutor } from '../services/sync-executor'
 
 export const fileSync = () => {
   const { store } = useStore()
-  const { writeFile, readFile, deleteFile, fileExists } = localFileStorage()
+  const { writeFile, readFile, deleteFile, fileExists, listFilesInDirectory } = localFileStorage()
   const { downloadFile, uploadFile, checkHealth } = remoteFileStorage()
 
   let unwatch: (() => void) | null = null
@@ -25,6 +25,26 @@ export const fileSync = () => {
   const mergeLocalFiles = (patch: Record<string, LocalFile>) => {
     const { localFiles: current } = store.query(queryDb(tables.localFileState.get()))
     store.commit(events.localFileStateSet({ localFiles: { ...current, ...patch } }))
+  }
+
+  const cleanDeletedLocalFiles = async () => {
+    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
+    const trackedPaths = new Set(
+      Object.values(localFiles)
+        .map((lf) => lf.path)
+        .filter((p) => !!p)
+        .map((p) => p.split('?')[0])
+    )
+    const diskPaths = await listFilesInDirectory('files')
+    await Promise.all(diskPaths.map(async (diskPath) => {
+      if (!trackedPaths.has(diskPath)) {
+        try {
+          await deleteFile(diskPath)
+        } catch (e) {
+          console.error('error deleting stray local file', diskPath, e)
+        }
+      }
+    }))
   }
 
   const stopHealthChecks = () => {
@@ -195,17 +215,7 @@ export const fileSync = () => {
     }
   }
 
-  const deleteLocalFile = async (fileId: string) => {
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    if (fileId in localFiles) {
-      console.log('deleting local file', fileId)
-      store.commit(events.localFileStateSet({
-        localFiles: Object.fromEntries(Object.entries(localFiles).filter(([key]) => key !== fileId))
-      }))
-      const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-      return deleteFile(file.localPath)
-    }
-  }
+  // retained per-file deletion helper if needed in the future
 
   const executor = createSyncExecutor({
     maxConcurrentPerKind: { download: 2, upload: 2 },
@@ -287,8 +297,7 @@ export const fileSync = () => {
         executor.enqueue('upload', fileId)
       }
     })
-    const deletedFiles = store.query(queryDb(tables.files.where('deletedAt', '!=', null)))
-    await Promise.all(deletedFiles.map(async (file) => deleteLocalFile(file.id)))
+    await cleanDeletedLocalFiles()
   }
 
   const runFileSync = () => {

@@ -5,9 +5,9 @@ import LiveStoreWorker from './livestore/livestore.worker?worker'
 import { schema } from './livestore/schema'
 import { LiveStoreProvider } from 'vue-livestore'
 import Images from './components/images.vue'
-import Debug from './components/debug.vue'
 import FileSyncProvider from './components/file-sync-provider.vue'
 import TopBar from './components/top-bar.vue'
+import Debug from './components/debug.vue'
 
 const adapter = makePersistedAdapter({
   storage: { type: 'opfs' },
@@ -18,7 +18,7 @@ const adapter = makePersistedAdapter({
 const storeOptions = {
   schema,
   adapter,
-  storeId: 'vue-livestore-filesync-14',
+  storeId: 'vue-livestore-filesync-19',
   syncPayload: { authToken: import.meta.env.VITE_WORKER_AUTH_TOKEN }
 }
 </script>
