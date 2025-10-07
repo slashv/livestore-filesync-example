@@ -2,7 +2,7 @@
 
 This is an example repository on how file syncing can work with LiveStore for local first apps. It's build with Vue but the core [services](src/services/) should be mostly framework agnostic.
 
-Files are first saved in OPFS and automatically synced across clients in the background through remote storage.
+Files are first saved to OPFS and automatically synced across clients in the background through remote storage.
 
 [State](src/livestore/schema.ts) is split between a synced `files` table and a `localFilesState` `clientDocument` which is only shared between clients with access to the same local storage.
 
