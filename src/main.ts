@@ -9,7 +9,9 @@ if ('serviceWorker' in navigator) {
     const baseUrl = (import.meta as any).env?.VITE_WORKER_API_URL || 'http://localhost:8787/api'
     const filesBaseUrl = `${baseUrl}/files`
     const token = (import.meta as any).env?.VITE_WORKER_AUTH_TOKEN || ''
-    const url = `/sw.js?filesBaseUrl=${encodeURIComponent(filesBaseUrl)}&token=${encodeURIComponent(token)}`
-    navigator.serviceWorker.register(url).catch(() => {})
+    const swUrl = new URL('./workers/sw.ts', import.meta.url)
+    swUrl.searchParams.set('filesBaseUrl', filesBaseUrl)
+    swUrl.searchParams.set('token', token)
+    navigator.serviceWorker.register(swUrl.toString(), { type: 'module' }).catch(() => {})
   })
 }

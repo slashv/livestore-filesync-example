@@ -10,7 +10,7 @@ Files are first saved to OPFS and automatically synced across clients in the bac
 
 [Sync service](src/services/file-sync.ts) detects changes to files, updates `localFileStorage` and queues transfers through a [sync executor](src/services/sync-executor.ts). It handles network failure and automatically resumes syncing when reconnected.
 
-[Service worker](public/sw.js) proxies requests which start with `/files` to first try to retrieve from OPFS and falls back to remote url. This relieves UI code from needing to detect when to fetch from remote or local storage.
+[Service worker](src/workers/sw.ts) proxies requests which start with `/files` to first try to retrieve from OPFS and falls back to remote url. This relieves UI code from needing to detect when to fetch from remote or local storage.
 
 [Web worker](src/workers/cloudflare-sync.ts) included which handles remote file storage api requests alongside LiveStore syncing via Cloudflare.
 
