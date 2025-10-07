@@ -25,6 +25,9 @@ This feature is suitable for using [Effect](https://effect.website/) due to it's
 ## Dev setup
 
 ```bash
+# Create .env file
+cp .env.template .env
+
 # Install dependencies
 pnpm install
 
