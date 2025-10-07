@@ -10,8 +10,7 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   event.waitUntil(self.clients.claim())
 })
 
-// Read base URL and token from the registration query string so we can keep it configurable at runtime
-;(self as any).__FILES_BASE_URL__ = (() => {
+const FILES_BASE_URL = (() => {
   try {
     const params = new URLSearchParams(self.location.search)
     return params.get('filesBaseUrl') || 'http://localhost:8787/api/files'
@@ -20,7 +19,7 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   }
 })()
 
-;(self as any).__WORKER_AUTH_TOKEN__ = (() => {
+const WORKER_AUTH_TOKEN = (() => {
   try {
     const params = new URLSearchParams(self.location.search)
     return params.get('token') || ''
@@ -51,9 +50,9 @@ async function handleFileRequest(_request: Request, opfsPath: string): Promise<R
     })
   } catch {
     const remotePath = opfsPath.replace(/^files\//, '')
-    const remoteUrl = `${(self as any).__FILES_BASE_URL__}/${remotePath}`
+    const remoteUrl = `${FILES_BASE_URL}/${remotePath}`
     const headers: Record<string, string> = {}
-    if ((self as any).__WORKER_AUTH_TOKEN__) headers['Authorization'] = `Bearer ${(self as any).__WORKER_AUTH_TOKEN__}`
+    if (WORKER_AUTH_TOKEN) headers['Authorization'] = `Bearer ${WORKER_AUTH_TOKEN}`
     return fetch(remoteUrl, { headers })
   }
 }
