@@ -73,7 +73,7 @@ runFileSync()
 </template>
 ```
 
-The `saveFile` is a
+In the full code we have a `saveFile` helper method in the [file storage](src/services/file-storage.ts) service but here I've extracted the essential part to highlight that we only need to save to local storage and commit the FileCreated event and then the [sync service](src/services/file-sync.ts) takes care of the rest.
 
 ```vue
 // components/images.vue
@@ -83,7 +83,6 @@ const images = store.useQuery(
   queryDb(tables.images.where({ deletedAt: null }))
 )
 
-// In the main code we have a saveFile helper method but this is basically all you need
 const addImage = async (event) => {
   const file = Array.from(event.target.files)[0]
   const { id: fileId, path } = makeStoredFilePath(file.name)
