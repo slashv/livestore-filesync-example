@@ -12,7 +12,7 @@ Files are first saved to OPFS and automatically synced across clients in the bac
 
 [Service worker](public/sw.js) proxies requests which start with `/files` to first try to retrieve from OPFS and falls back to remote url. This relieves UI code from needing to detect when to fetch from remote or local storage.
 
-[Web worker](src/workers/cloudflare-sync.ts) included which handles remote file storage api requests alongside LiveStore syncing.
+[Web worker](src/workers/cloudflare-sync.ts) included which handles remote file storage api requests alongside LiveStore syncing via Cloudflare.
 
 ## Comments & areas of improvement
 
@@ -25,11 +25,11 @@ This feature is suitable for using [Effect](https://effect.website/) due to it's
 ## Dev setup
 
 ```bash
-# Create .env file
-cp .env.template .env
-
 # Install dependencies
 pnpm install
+
+# Create .env file
+cp .env.template .env
 
 # Start local cloudflare sync provider and storage api
 npx wrangler dev
@@ -40,7 +40,7 @@ pnpm dev
 
 ## Example
 
-This is simplified example to showcase basic functionality, for complete code see files in [src](/src).
+This is a simplified version to showcase basic functionality, for complete code see files in [src](/src).
 
 [schema.ts](src/livestore/schema.ts) is relevant context to understand how the data structures are set up.
 
