@@ -28,23 +28,11 @@ export const fileSync = () => {
   }
 
   const cleanDeletedLocalFiles = async () => {
-    const { localFiles } = store.query(queryDb(tables.localFileState.get()))
-    const trackedPaths = new Set(
-      Object.values(localFiles)
-        .map((lf) => lf.path)
-        .filter((p) => !!p)
-        .map((p) => p.split('?')[0])
-    )
     const diskPaths = await listFilesInDirectory('files')
-    await Promise.all(diskPaths.map(async (diskPath) => {
-      if (!trackedPaths.has(diskPath)) {
-        try {
-          await deleteFile(diskPath)
-        } catch (e) {
-          console.error('error deleting stray local file', diskPath, e)
-        }
-      }
-    }))
+    const filesToDelete = store.query(queryDb(tables.files.where('deletedAt', '!=', null))).filter(
+      (file) => diskPaths.includes(file.localPath)
+    )
+    await Promise.all(filesToDelete.map((file) => deleteFile(file.localPath)))
   }
 
   const stopHealthChecks = () => {
@@ -97,7 +85,6 @@ export const fileSync = () => {
           lastSyncError: ''
         }
       }
-      console.log('local file state for file', file.id, nextLocalFilesState[file.id])
     })
 
     // Pass 2: detect on-disk presence for files missing in state (does disk I/O) and initialize state
