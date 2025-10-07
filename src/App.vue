@@ -33,7 +33,7 @@ const storeOptions = {
         <TopBar />
         <div class="flex flex-col gap-4 p-6">
           <Images />
-          <Debug />
+          <!-- <Debug /> -->
         </div>
       </FileSyncProvider>
     </LiveStoreProvider>
