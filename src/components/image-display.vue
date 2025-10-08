@@ -25,7 +25,7 @@ const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId 
 <template>
   <div class="w-full grid grid-cols-[1fr_3fr] border-[1px] border-border">
     <div class="border-r-[1px] border-border relative overflow-hidden">
-      <img :src="localFile?.path" class="absolute inset-0 w-full h-full object-cover" />
+      <img :src="file.localPath" class="absolute inset-0 w-full h-full object-cover" />
     </div>
     <div class="flex flex-col">
       <div class="p-2 border-b-[1px] border-border flex justify-between items-center">
@@ -37,7 +37,7 @@ const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId 
       </div>
 
       <div class="grid grid-cols-[120px_1fr] text-sm">
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Local Path</div>
+        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Path</div>
         <div class="p-2 border-b-[1px] border-border">{{ file?.localPath }}</div>
 
         <div class="p-2 border-b-[1px] border-r-[1px] border-border">Remote URL</div>

@@ -36,8 +36,10 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 })
 
 async function handleFileRequest(_request: Request, opfsPath: string): Promise<Response> {
-  try {
-    const { readFile } = localFileStorage()
+  console.log('handleFileRequest', _request, opfsPath)
+  const { readFile, fileExists } = localFileStorage()
+  if (await fileExists(opfsPath)) {
+    console.log('reading file from local storage', opfsPath)
     const file = await readFile(opfsPath)
     const body = await file.arrayBuffer()
     const type = (file as File).type || guessMimeFromPath(opfsPath)
@@ -48,13 +50,32 @@ async function handleFileRequest(_request: Request, opfsPath: string): Promise<R
         'cache-control': 'no-store'
       }
     })
-  } catch {
-    const remotePath = opfsPath.replace(/^files\//, '')
-    const remoteUrl = `${FILES_BASE_URL}/${remotePath}`
-    const headers: Record<string, string> = {}
-    if (WORKER_AUTH_TOKEN) headers['Authorization'] = `Bearer ${WORKER_AUTH_TOKEN}`
-    return fetch(remoteUrl, { headers })
   }
+  console.log('reading file from remote storage', opfsPath)
+  const remotePath = opfsPath.replace(/^files\//, '')
+  const remoteUrl = `${FILES_BASE_URL}/${remotePath}`
+  const headers: Record<string, string> = {}
+  if (WORKER_AUTH_TOKEN) headers['Authorization'] = `Bearer ${WORKER_AUTH_TOKEN}`
+  return fetch(remoteUrl, { headers })
+
+  // try {
+  //   const file = await readFile(opfsPath)
+  //   const body = await file.arrayBuffer()
+  //   const type = (file as File).type || guessMimeFromPath(opfsPath)
+  //   return new Response(body, {
+  //     status: 200,
+  //     headers: {
+  //       'content-type': type,
+  //       'cache-control': 'no-store'
+  //     }
+  //   })
+  // } catch {
+  //   const remotePath = opfsPath.replace(/^files\//, '')
+  //   const remoteUrl = `${FILES_BASE_URL}/${remotePath}`
+  //   const headers: Record<string, string> = {}
+  //   if (WORKER_AUTH_TOKEN) headers['Authorization'] = `Bearer ${WORKER_AUTH_TOKEN}`
+  //   return fetch(remoteUrl, { headers })
+  // }
 }
 
 function guessMimeFromPath(path: string): string {
