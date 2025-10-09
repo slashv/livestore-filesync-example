@@ -25,7 +25,7 @@ const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId 
 <template>
   <div class="w-full grid grid-cols-[1fr_3fr] border-[1px] border-border">
     <div class="border-r-[1px] border-border relative overflow-hidden">
-      <img :src="localFile?.path" class="absolLocalFileute inset-0 w-full h-full object-cover" />
+      <img :src="localFile?.path" class="absolute inset-0 w-full h-full object-cover" />
     </div>
     <div class="flex flex-col">
       <div class="p-2 border-b-[1px] border-border flex justify-between items-center">

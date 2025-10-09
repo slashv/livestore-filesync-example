@@ -4,11 +4,13 @@ import { localFileStorage } from './local-file-storage'
 import { remoteFileStorage } from './remote-file-storage'
 import { queryDb } from '@livestore/livestore'
 import { tables, events } from '../livestore/schema'
+import { fileSync } from './file-sync'
 
 export const fileStorage = () => {
   const { store } = useStore()
   const { writeFile, deleteFile: deleteLocalFile } = localFileStorage()
   const { deleteFile: deleteRemoteFile } = remoteFileStorage()
+  const { markLocalFileChanged } = fileSync()
 
   const saveFile = async (file: File): Promise<string> => {
     const { id: fileId, path } = makeStoredFilePath(file.name)
@@ -24,6 +26,12 @@ export const fileStorage = () => {
     return fileId
   }
 
+  const updateFile = async (fileId: string, file: File) => {
+    const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+    await writeFile(fileInstance.path, file)
+    await markLocalFileChanged(fileId)
+  }
+
   const deleteFile = async (fileId: string) => {
     const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
     store.commit(events.fileDeleted({ id: fileId, deletedAt: new Date() }))
@@ -34,6 +42,7 @@ export const fileStorage = () => {
 
   return {
     saveFile,
+    updateFile,
     deleteFile
   }
 }

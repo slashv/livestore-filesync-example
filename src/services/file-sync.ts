@@ -278,7 +278,7 @@ export const fileSync = () => {
     attachConnectivityHandlers()
     const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
     const watchTrigger = computed(() => files.value
-      .map((file) => `${file.id}:${file.remoteUrl ?? ''}:${file.path ?? ''}:${file.contentHash ?? ''}:${file.deletedAt ?? ''}`)
+      .map((file) => `${file.id}:${file.remoteUrl }:${file.path }:${file.contentHash }`)
       .join(','))
     unwatch = watch(() => watchTrigger.value, async () => {
       await updateLocalFileState()

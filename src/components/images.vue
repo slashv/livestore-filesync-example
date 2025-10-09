@@ -5,15 +5,14 @@ import { useStore } from 'vue-livestore'
 import { tables, events } from '../livestore/schema'
 import type { Image } from '../types'
 import { fileStorage } from '../services/file-storage'
-import { fileSync } from '../services/file-sync'
 import { localFileStorage } from '../services/local-file-storage'
 import { invertImageFile } from '../utils/image.utils'
 import ImageDisplay from './image-display.vue'
 
 const { store } = useStore()
 const { saveFile, deleteFile } = fileStorage()
-const { markLocalFileChanged } = fileSync()
-const { readFile, writeFile } = localFileStorage()
+const { updateFile } = fileStorage()
+const { readFile } = localFileStorage()
 
 const images = store.useQuery(queryDb(tables.images.where({ deletedAt: null }).orderBy('createdAt', 'desc')))
 
@@ -42,8 +41,7 @@ async function editImage(image: Image) {
   const file = store.query(queryDb(tables.files.where({ id: image.fileId }).first()))
   const srcFile = await readFile(file.path)
   const edited = await invertImageFile(srcFile)
-  await writeFile(file.path, edited)
-  await markLocalFileChanged(image.fileId)
+  await updateFile(image.fileId, edited)
 }
 
 function handleFileInputChange(e: Event) {

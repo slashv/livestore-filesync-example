@@ -7,7 +7,7 @@ import { LiveStoreProvider } from 'vue-livestore'
 import Images from './components/images.vue'
 import FileSyncProvider from './components/file-sync-provider.vue'
 import TopBar from './components/top-bar.vue'
-import Debug from './components/debug.vue'
+// import Debug from './components/debug.vue'
 
 const adapter = makePersistedAdapter({
   storage: { type: 'opfs' },
@@ -33,7 +33,7 @@ const storeOptions = {
         <TopBar />
         <div class="flex flex-col gap-4 p-6">
           <Images />
-          <Debug />
+          <!-- <Debug /> -->
         </div>
       </FileSyncProvider>
     </LiveStoreProvider>
