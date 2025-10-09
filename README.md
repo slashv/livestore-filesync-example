@@ -6,11 +6,11 @@ Files are first saved to OPFS and automatically synced across clients in the bac
 
 [State](src/livestore/schema.ts) is split between a synced `files` table and a `localFilesState` `clientDocument` which is only shared between clients with access to the same local storage.
 
-[File storage](src/services/file-storage.ts) service exposes `saveFile` and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services.
+[File storage](src/services/file-storage.ts) service exposes `saveFile`, `updateFile` and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services.
 
 [Sync service](src/services/file-sync.ts) detects changes to files, updates `localFileStorage` and queues transfers through a [sync executor](src/services/sync-executor.ts). It handles network failure and automatically resumes syncing when reconnected.
 
-[Service worker](src/workers/sw.ts) proxies requests which start with `/files` to first try to retrieve from OPFS and falls back to remote url. This relieves UI code from needing to detect when to fetch from remote or local storage.
+[Service worker](public/sw.js) proxies requests which start with `/files` to first try to retrieve from OPFS and falls back to remote url. This relieves UI code from needing to detect when to fetch from remote or local storage.
 
 [Web worker](src/workers/cloudflare-sync.ts) included which handles remote file storage api requests alongside LiveStore syncing via Cloudflare.
 
@@ -26,6 +26,7 @@ This feature is suitable for using [Effect](https://effect.website/) due to it's
 
 - [ ] File transfer progress tracking
 - [ ] Resumable transfers
+- [ ] Explore Workbox for better service worker caching
 
 ## Dev setup
 
