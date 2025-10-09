@@ -97,7 +97,7 @@ const addImage = async (event) => {
   await writeFile(path, file)  // Write file to OPFS
   store.commit(events.fileCreated({
       id: fileId,
-      localPath: path,
+      path: path,
       contentHash: fileHash,
       createdAt: new Date(),
       updatedAt: new Date(),

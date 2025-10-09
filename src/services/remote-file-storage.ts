@@ -37,8 +37,8 @@ export const remoteFileStorage = () => {
   }
 
   const downloadFile = async (url: string): Promise<File> => {
-      console.log('downloading file with fake delay', url)
-      await new Promise((resolve) => setTimeout(resolve, 5000))
+      // console.log('downloading file with fake delay', url)
+      // await new Promise((resolve) => setTimeout(resolve, 5000))
 
       const response = await fetch(url, { headers: getAuthHeaders() })
       // console.log('downloaded file response', response)

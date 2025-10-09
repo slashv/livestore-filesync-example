@@ -34,8 +34,8 @@ export const tables = {
     name: 'files',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
+      path: State.SQLite.text({ default: '' }),
       remoteUrl: State.SQLite.text({ default: '' }),
-      localPath: State.SQLite.text({ default: '' }),
       contentHash: State.SQLite.text({ default: '' }),
       createdAt: State.SQLite.integer({ schema: Schema.DateFromNumber }),
       updatedAt: State.SQLite.integer({ schema: Schema.DateFromNumber }),
@@ -87,7 +87,7 @@ export const events = {
     name: 'v1.FileCreated',
     schema: Schema.Struct({
       id: Schema.String,
-      localPath: Schema.String,
+      path: Schema.String,
       contentHash: Schema.String,
       createdAt: Schema.Date,
       updatedAt: Schema.Date,
@@ -98,7 +98,6 @@ export const events = {
     schema: Schema.Struct({
       id: Schema.String,
       remoteUrl: Schema.String,
-      localPath: Schema.String,
       contentHash: Schema.String,
       updatedAt: Schema.Date,
     }),
@@ -116,10 +115,10 @@ const materializers = State.SQLite.materializers(events, {
   'v1.ImageCreated': ({ id, title, fileId, createdAt, updatedAt }) => tables.images.insert({ id, title, fileId, createdAt, updatedAt }),
   'v1.ImageUpdated': ({ id, title, updatedAt }) => tables.images.update({ title, updatedAt }).where({ id }),
   'v1.ImageDeleted': ({ id, deletedAt }) => tables.images.update({ deletedAt }).where({ id }),
-  'v1.FileCreated': ({ id, localPath, contentHash, createdAt, updatedAt }) =>
-    tables.files.insert({ id, localPath, contentHash, createdAt, updatedAt }),
+  'v1.FileCreated': ({ id, path, contentHash, createdAt, updatedAt }) =>
+    tables.files.insert({ id, path, contentHash, createdAt, updatedAt }),
   'v1.FileUpdated': ({ id, remoteUrl, contentHash, updatedAt }) =>
-    tables.files.update({ remoteUrl, contentHash, updatedAt }).where({ id }),
+    tables.files.update({remoteUrl, contentHash, updatedAt }).where({ id }),
   'v1.FileDeleted': ({ id, deletedAt }) => tables.files.update({ deletedAt }).where({ id }),
 })
 

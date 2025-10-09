@@ -40,10 +40,9 @@ async function addImagesFromFiles(files: File[]) {
 
 async function editImage(image: Image) {
   const file = store.query(queryDb(tables.files.where({ id: image.fileId }).first()))
-  if (!file?.localPath) return
-  const srcFile = await readFile(file.localPath)
+  const srcFile = await readFile(file.path)
   const edited = await invertImageFile(srcFile)
-  await writeFile(file.localPath, edited)
+  await writeFile(file.path, edited)
   await markLocalFileChanged(image.fileId)
 }
 

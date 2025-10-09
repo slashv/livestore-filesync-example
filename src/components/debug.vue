@@ -16,7 +16,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
       <thead>
         <tr>
           <th>ID</th>
-          <th>Local Path</th>
+          <th>Path</th>
           <th>Remote URL</th>
           <th>Content Hash</th>
         </tr>
@@ -24,7 +24,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
       <tbody>
         <tr v-for="file in files" :key="file.id">
           <td>{{ file.id.split('-')[0] }}</td>
-          <td>{{ file.localPath }}</td>
+          <td>{{ file.path }}</td>
           <td>{{ file.remoteUrl }}</td>
           <td>{{ file.contentHash }}</td>
         </tr>
@@ -36,7 +36,7 @@ const { localFiles } = store.useClientDocument(tables.localFileState)
       <thead>
         <tr>
           <th>ID</th>
-          <th>OPFS Key</th>
+          <th>Path</th>
           <th>Download Status</th>
           <th>Upload Status</th>
           <th>Local Hash</th>
