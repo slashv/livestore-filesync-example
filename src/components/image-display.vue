@@ -36,30 +36,44 @@ const file = store.useQuery(queryDb(tables.files.where({ id: props.image.fileId 
         </div>
       </div>
 
-      <div class="grid grid-cols-[120px_1fr] text-sm">
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Path</div>
-        <div class="p-2 border-b-[1px] border-border">{{ file?.path }}</div>
+      <table class="w-full text-sm">
+        <tbody>
+          <tr>
+            <td class="p-2 w-[180px] border-b-[1px] border-r-[1px] border-border whitespace-nowrap">File: Path</td>
+            <td class="p-2 border-b-[1px] border-border">{{ file?.path }}</td>
+          </tr>
 
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Remote URL</div>
-        <div class="p-2 border-b-[1px] border-border">{{ file?.remoteUrl }}</div>
+          <tr>
+            <td class="p-2 w-[180px] border-b-[1px] border-r-[1px] border-border whitespace-nowrap">File: Remote URL</td>
+            <td class="p-2 border-b-[1px] border-border">{{ file?.remoteUrl }}</td>
+          </tr>
 
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Download</div>
-        <div class="p-2 border-b-[1px] border-border">{{ localFile?.downloadStatus }}</div>
+          <tr>
+            <td class="p-2 w-[180px] border-b-[1px] border-r-[1px] border-border whitespace-nowrap">File: Hash</td>
+            <td class="p-2 border-b-[1px] border-border">{{ file?.contentHash }}</td>
+          </tr>
 
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Upload</div>
-        <div class="p-2 border-b-[1px] border-border">{{ localFile?.uploadStatus }}</div>
+          <tr>
+            <td class="p-2 w-[180px] border-b-[1px] border-r-[1px] border-border whitespace-nowrap">Local File: Hash</td>
+            <td class="p-2 border-b-[1px] border-border">{{ localFile?.localHash }}</td>
+          </tr>
 
-        <div class="p-2 border-b-[1px] border-r-[1px] border-border">Content Hash</div>
-        <div class="p-2 border-b-[1px] border-border">{{ file?.contentHash }}</div>
+          <tr>
+            <td class="p-2 w-[180px] border-b-[1px] border-r-[1px] border-border whitespace-nowrap">Local File: Download</td>
+            <td class="p-2 border-b-[1px] border-border">{{ localFile?.downloadStatus }}</td>
+          </tr>
 
-        <div class="p-2 border-r-[1px] border-border" :class="{ 'border-b-[1px] border-border': localFile?.lastSyncError }">Local Hash</div>
-        <div class="p-2" :class="{ 'border-b-[1px] border-border': localFile?.lastSyncError }">{{ localFile?.localHash }}</div>
+          <tr>
+            <td class="p-2 w-[180px] border-r-[1px] border-border whitespace-nowrap">Local File: Upload</td>
+            <td class="p-2">{{ localFile?.uploadStatus }}</td>
+          </tr>
 
-        <template v-if="localFile?.lastSyncError">
-          <div class="p-2 border-r-[1px] border-border">Error</div>
-          <div class="p-2">{{ localFile?.lastSyncError }}</div>
-        </template>
-      </div>
+          <tr v-if="localFile?.lastSyncError">
+            <td class="p-2 w-[180px] border-r-[1px] border-t-[1px] border-border whitespace-nowrap">Error</td>
+            <td class="p-2 border-t-[1px] border-border">{{ localFile?.lastSyncError }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>

@@ -1,4 +1,3 @@
-import { watch, computed } from 'vue'
 import { localFileStorage } from '../services/local-file-storage'
 import { remoteFileStorage } from '../services/remote-file-storage'
 import { hashFile, makeStoredPathForId } from '../utils/file.utils'
@@ -14,11 +13,10 @@ export const fileSync = () => {
   const { writeFile, readFile, deleteFile, fileExists, listFilesInDirectory } = localFileStorage()
   const { downloadFile, uploadFile, checkHealth } = remoteFileStorage()
 
-  let unwatch: (() => void) | null = null
+  let unsubscribe: (() => void) | null = null
   let connectivityEventsAttached = false
   let healthCheckIntervalId: number | null = null
   let setOnline: (value: boolean) => void
-  const inFlightLocalDetection = new Set<string>()
 
   const mergeLocalFiles = (patch: Record<string, LocalFileMutable>) => {
     // Merge helper to to avoid concurrent writers stomping each other's updates.
@@ -100,24 +98,18 @@ export const fileSync = () => {
     await Promise.all(files.filter(
       (file) => !(file.id in nextLocalFilesState)
     ).map(async (file) => {
-      if (inFlightLocalDetection.has(file.id)) return
-      inFlightLocalDetection.add(file.id)
-      try {
-        const exists = await fileExists(file.path)
-        if (!exists) return
-        const f = await readFile(file.path)
-        const localHash = await hashFile(f)
-        const shouldUpload = !file.remoteUrl  // Defensive check
+      const exists = await fileExists(file.path)
+      if (!exists) return
+      const f = await readFile(file.path)
+      const localHash = await hashFile(f)
+      const shouldUpload = !file.remoteUrl  // Defensive check
 
-        additions[file.id] = {
-          path: file.path,
-          localHash,
-          downloadStatus: 'done',
-          uploadStatus: shouldUpload ? 'pending' : 'done',
-          lastSyncError: ''
-        }
-      } finally {
-        inFlightLocalDetection.delete(file.id)
+      additions[file.id] = {
+        path: file.path,
+        localHash,
+        downloadStatus: 'done',
+        uploadStatus: shouldUpload ? 'pending' : 'done',
+        lastSyncError: ''
       }
     }))
 
@@ -274,16 +266,15 @@ export const fileSync = () => {
   }
 
   const runFileSync = () => {
-    if (unwatch) return
+    if (unsubscribe) return
     attachConnectivityHandlers()
-    const files = store.useQuery(queryDb(tables.files.select().where({ deletedAt: null })))
-    const watchTrigger = computed(() => files.value
-      .map((file) => `${file.id}:${file.remoteUrl }:${file.path }:${file.contentHash }`)
-      .join(','))
-    unwatch = watch(() => watchTrigger.value, async () => {
-      await updateLocalFileState()
-      await syncFiles()
-    }, { immediate: true })
+    const fileQuery = queryDb(tables.files.select().where({ deletedAt: null }))
+    unsubscribe = store.subscribe(fileQuery, {
+      onUpdate: async () => {
+        await updateLocalFileState()
+        await syncFiles()
+      }
+    })
   }
 
   return {

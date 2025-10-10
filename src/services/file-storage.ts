@@ -8,14 +8,14 @@ import { fileSync } from './file-sync'
 
 export const fileStorage = () => {
   const { store } = useStore()
-  const { writeFile, deleteFile: deleteLocalFile } = localFileStorage()
+  const { writeFile: writeLocalFile, deleteFile: deleteLocalFile } = localFileStorage()
   const { deleteFile: deleteRemoteFile } = remoteFileStorage()
   const { markLocalFileChanged } = fileSync()
 
   const saveFile = async (file: File): Promise<string> => {
     const { id: fileId, path } = makeStoredFilePath(file.name)
     const fileHash = await hashFile(file)
-    await writeFile(path, file)
+    await writeLocalFile(path, file)
     store.commit(events.fileCreated({
       id: fileId,
       path: path,
@@ -28,7 +28,7 @@ export const fileStorage = () => {
 
   const updateFile = async (fileId: string, file: File) => {
     const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    await writeFile(fileInstance.path, file)
+    await writeLocalFile(fileInstance.path, file)
     await markLocalFileChanged(fileId)
   }
 
