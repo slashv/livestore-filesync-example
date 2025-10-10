@@ -6,7 +6,7 @@ Files are first saved to OPFS and automatically synced across clients in the bac
 
 [State](src/livestore/schema.ts) is split between a synced `files` table and a `localFilesState` clientDocument which is only synced between clients sessions (tabs) which have access to the same local storage.
 
-[File storage](src/services/file-storage.ts) service exposes `saveFile`, 'updateFile' and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services.
+[File storage](src/services/file-storage.ts) service exposes `saveFile`, `updateFile` and `deleteFile` methods which handles the underlying file operations through the [local storage](src/services/local-file-storage.ts) and [remote storage](src/services/remote-file-storage.ts) services.
 
 [Sync service](src/services/file-sync.ts) subscribes to changes on the files table, updates `localFileStorage` and queues transfers through a [sync executor](src/services/sync-executor.ts). It handles network failure and automatically resumes syncing when reconnected.
 
