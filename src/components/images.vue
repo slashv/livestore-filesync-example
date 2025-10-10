@@ -20,8 +20,8 @@ const dragDepth = ref(0)
 const showDropOverlay = ref(false)
 
 async function deleteImage(image: Image) {
-  await deleteFile(image.fileId)
   store.commit(events.imageDeleted({ id: image.id, deletedAt: new Date() }))
+  await deleteFile(image.fileId)
 }
 
 async function addImagesFromFiles(files: File[]) {

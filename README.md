@@ -1,6 +1,8 @@
 # Local first file syncing using LiveStore
 
-This is an example repository on how file syncing can work with LiveStore for local first apps. It's built with Vue but the core [services](src/services/) are framework agnostic.
+[Video demo](https://youtu.be/8h3L3143mg8)
+
+This is an example repository on how file syncing can work with LiveStore for local-first apps. It's built with Vue but the core [services](src/services/) are framework agnostic.
 
 Files are first saved to OPFS and automatically synced across clients in the background through remote storage.
 
