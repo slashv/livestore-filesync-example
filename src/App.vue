@@ -18,7 +18,7 @@ const adapter = makePersistedAdapter({
 const storeOptions = {
   schema,
   adapter,
-  storeId: 'vue-livestore-filesync-20',
+  storeId: 'vue-livestore-filesync-23',
   syncPayload: { authToken: import.meta.env.VITE_WORKER_AUTH_TOKEN }
 }
 </script>

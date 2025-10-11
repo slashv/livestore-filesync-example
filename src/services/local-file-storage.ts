@@ -29,6 +29,7 @@ export const localFileStorage = () => {
   }
 
   const writeFile = async (path: string, file: File): Promise<void> => {
+    console.log('writing file to', path, file)
     const { dir, name } = await getParentDirectory(path, { create: true })
     const handle = await dir.getFileHandle(name, { create: true })
     const writable = await handle.createWritable()

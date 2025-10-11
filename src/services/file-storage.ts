@@ -1,5 +1,5 @@
 import { useStore } from 'vue-livestore'
-import { hashFile, makeStoredFilePath } from '../utils/file.utils'
+import { hashFile, makeStoredPathForHash } from '../utils/file.utils'
 import { localFileStorage } from './local-file-storage'
 import { remoteFileStorage } from './remote-file-storage'
 import { queryDb } from '@livestore/livestore'
@@ -13,8 +13,9 @@ export const fileStorage = () => {
   const { markLocalFileChanged } = fileSync()
 
   const saveFile = async (file: File): Promise<string> => {
-    const { id: fileId, path } = makeStoredFilePath(file.name)
+    const fileId = crypto.randomUUID()
     const fileHash = await hashFile(file)
+    const { path } = makeStoredPathForHash(fileHash)
     await writeLocalFile(path, file)
     store.commit(events.fileCreated({
       id: fileId,
@@ -27,9 +28,17 @@ export const fileStorage = () => {
   }
 
   const updateFile = async (fileId: string, file: File) => {
-    const fileInstance = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    await writeLocalFile(fileInstance.path, file)
-    await markLocalFileChanged(fileId)
+    const prev = store.query(queryDb(tables.files.where({ id: fileId }).first()))
+    const newHash = await hashFile(file)
+    const { path: newPath } = makeStoredPathForHash(newHash)
+
+    if (prev.path !== newPath) {
+      await writeLocalFile(newPath, file)
+      try { await deleteLocalFile(prev.path) } catch(e) { console.error('Error deleting old local file', e) }
+    } else {
+      await writeLocalFile(prev.path, file)
+    }
+    await markLocalFileChanged(fileId, newHash, newPath)
   }
 
   const deleteFile = async (fileId: string) => {

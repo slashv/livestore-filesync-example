@@ -1,6 +1,6 @@
 import { localFileStorage } from '../services/local-file-storage'
 import { remoteFileStorage } from '../services/remote-file-storage'
-import { hashFile, makeStoredPathForId } from '../utils/file.utils'
+import { hashFile, makeStoredPathForHash } from '../utils/file.utils'
 import { useStore } from 'vue-livestore'
 import { queryDb } from '@livestore/livestore'
 import { tables, events } from '../livestore/schema'
@@ -34,10 +34,16 @@ export const fileSync = () => {
 
   const cleanDeletedLocalFiles = async () => {
     const diskPaths = await listFilesInDirectory('files')
-    const filesToDelete = store.query(queryDb(tables.files.where('deletedAt', '!=', null))).filter(
-      (file) => diskPaths.includes(file.path)
+    const activePaths = new Set(
+      store.query(queryDb(tables.files.where({ deletedAt: null }))).map((f) => f.path)
     )
-    await Promise.all(filesToDelete.map((file) => deleteFile(file.path)))
+    const deletedRows = store.query(queryDb(tables.files.where('deletedAt', '!=', null)))
+    const uniquePathsToDelete = Array.from(new Set(
+      deletedRows
+        .map((f) => f.path)
+        .filter((p) => diskPaths.includes(p) && !activePaths.has(p))
+    ))
+    await Promise.all(uniquePathsToDelete.map((p) => deleteFile(p)))
   }
 
   const stopHealthChecks = () => {
@@ -132,12 +138,11 @@ export const fileSync = () => {
       }
       const file = await downloadFile(fileInstance.remoteUrl)
       console.log('downloaded remote file', file.name, file)
-      const { path } = makeStoredPathForId(fileId, file.name)
-      await writeFile(path, file)
+      await writeFile(fileInstance.path, file)
       const localHash = await hashFile(file)
       return {
         [fileId]: {
-          path: `${path}?v=${localHash}`,
+          path: fileInstance.path,
           localHash: localHash,
           downloadStatus: 'done',
           uploadStatus: 'done',
@@ -161,12 +166,13 @@ export const fileSync = () => {
 
   const uploadLocalFile = async (fileId: string, localFile: LocalFileMutable): Promise<Record<string, LocalFileMutable>> => {
     try {
-      console.log('uploading local file', fileId)
+      console.log('uploading local file', fileId, localFile.path)
       const file = await readFile(localFile.path)
       const remoteUrl = await uploadFile(file)
       console.log('uploaded local file', file.name, remoteUrl)
       store.commit(events.fileUpdated({
         id: fileId,
+        path: localFile.path.replace(/\?.*$/, ''),
         remoteUrl: remoteUrl,
         contentHash: localFile.localHash,
         updatedAt: new Date(),
@@ -224,13 +230,10 @@ export const fileSync = () => {
     }
   }
 
-  const markLocalFileChanged = async (fileId: string) => {
-    const file = store.query(queryDb(tables.files.where({ id: fileId }).first()))
-    const f = await readFile(file.path)
-    const localHash = await hashFile(f)
+  const markLocalFileChanged = async (fileId: string, hash: string, path: string) => {
     mergeLocalFiles({ [fileId]: {
-      path: `${file.path}?v=${localHash}`,
-      localHash,
+      path,
+      localHash: hash,
       downloadStatus: 'done',
       uploadStatus: 'queued',
       lastSyncError: ''
@@ -262,7 +265,7 @@ export const fileSync = () => {
         executor.enqueue('upload', fileId)
       }
     })
-    await cleanDeletedLocalFiles()
+    // await cleanDeletedLocalFiles()
   }
 
   const runFileSync = () => {

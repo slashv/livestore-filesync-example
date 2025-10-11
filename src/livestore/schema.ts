@@ -97,6 +97,7 @@ export const events = {
     name: 'v1.FileUpdated',
     schema: Schema.Struct({
       id: Schema.String,
+      path: Schema.String,
       remoteUrl: Schema.String,
       contentHash: Schema.String,
       updatedAt: Schema.Date,
@@ -117,8 +118,8 @@ const materializers = State.SQLite.materializers(events, {
   'v1.ImageDeleted': ({ id, deletedAt }) => tables.images.update({ deletedAt }).where({ id }),
   'v1.FileCreated': ({ id, path, contentHash, createdAt, updatedAt }) =>
     tables.files.insert({ id, path, contentHash, createdAt, updatedAt }),
-  'v1.FileUpdated': ({ id, remoteUrl, contentHash, updatedAt }) =>
-    tables.files.update({remoteUrl, contentHash, updatedAt }).where({ id }),
+  'v1.FileUpdated': ({ id, path, remoteUrl, contentHash, updatedAt }) =>
+    tables.files.update({ path, remoteUrl, contentHash, updatedAt }).where({ id }),
   'v1.FileDeleted': ({ id, deletedAt }) => tables.files.update({ deletedAt }).where({ id }),
 })
 
